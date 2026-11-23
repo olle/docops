@@ -1,0 +1,35 @@
+openapi: 3.1.0
+info:
+  title: Hello World API
+  version: 0.1.0
+  description: A minimal API description used as a docops example asset.
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+paths:
+  /hello:
+    get:
+      operationId: getHello
+      summary: Return a greeting
+      parameters:
+        - name: name
+          in: query
+          required: false
+          description: Name to greet.
+          schema:
+            type: string
+            default: World
+      responses:
+        "200":
+          description: A friendly greeting.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+                    examples:
+                      - Hello World!
