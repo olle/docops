@@ -7,8 +7,8 @@ run: verify
 	go run ./cmd/docops -h
 
 ##
-## Cross-compile the npmprobe Go binary for multiple platforms.
-## Outputs to bin/ directory with platform-specific names.
+## Cross-compile the docops Go binary for macOS.
+## Outputs to bin/docops.
 ##
 .PHONY: build
 build: fmt verify build-macos
@@ -17,7 +17,7 @@ build: fmt verify build-macos
 
 build-macos:
 	@mkdir -p bin
-	@echo "Building npmprobe for macOS..."
+	@echo "Building docops for macOS..."
 	GOOS=darwin GOARCH=arm64 go build -o bin/docops ./cmd/docops
 
 ##
