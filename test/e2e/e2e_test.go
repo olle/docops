@@ -13,7 +13,10 @@ import (
 	"time"
 )
 
-var docopsBinary string
+var (
+	docopsBinary string
+	repoRoot     = filepath.Join("..", "..")
+)
 
 func TestMain(m *testing.M) {
 	dir, err := os.MkdirTemp("", "docops-e2e-")
@@ -25,7 +28,6 @@ func TestMain(m *testing.M) {
 		docopsBinary += ".exe"
 	}
 
-	repoRoot := filepath.Join("..", "..")
 	goBin := filepath.Join(runtime.GOROOT(), "bin", "go")
 	build := exec.Command(goBin, "build", "-o", docopsBinary, "./cmd/docops")
 	build.Dir = repoRoot
@@ -54,6 +56,7 @@ func TestHelloNameResolvesName(t *testing.T) {
 func TestServerModeServesHelloWorld(t *testing.T) {
 	addr := freeAddr(t)
 	cmd := exec.Command(docopsBinary, "--server", "--addr", addr)
+	cmd.Dir = repoRoot
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	if err := cmd.Start(); err != nil {
@@ -86,8 +89,9 @@ func TestServerModeServesHelloWorld(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading response: %v", err)
 	}
-	if got, want := string(body), "Hello World!"; got != want {
-		t.Errorf("response body = %q, want %q", got, want)
+	got := string(body)
+	if !strings.Contains(got, "Hello World!") || !strings.Contains(got, "Hello World Events") {
+		t.Errorf("response body = %q, want greeting and AsyncAPI title", got)
 	}
 }
 

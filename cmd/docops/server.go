@@ -1,35 +1,36 @@
 package main
 
 import (
-	"io"
+	"errors"
+	"log"
 	"net/http"
 	"time"
 )
 
-// helloServer embeds the standard HTTP server so docops can serve its
-// greeting without pulling in any external dependencies.
-type helloServer struct {
-	*http.Server
+type httpServer interface {
+	ListenAndServe(addr string, handler http.Handler) error
 }
 
-func newHelloServer(addr string) *helloServer {
-	mux := http.NewServeMux()
-	mux.Handle("/", helloHandler{})
-	mux.Handle("/hello", helloHandler{})
+type stdHTTPServer struct{}
 
-	return &helloServer{
-		Server: &http.Server{
-			Addr:              addr,
-			Handler:           mux,
-			ReadHeaderTimeout: 5 * time.Second,
-		},
+func (stdHTTPServer) ListenAndServe(addr string, handler http.Handler) error {
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
+	err := server.ListenAndServe()
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
+	return err
 }
 
-// helloHandler writes the greeting as plain text.
-type helloHandler struct{}
-
-func (helloHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	_, _ = io.WriteString(w, "Hello World!")
+func handlerFor(writer outputWriter, titles []string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		if err := writer.Render(w, "World", titles); err != nil {
+			log.Printf("rendering response: %v", err)
+		}
+	})
 }
