@@ -31,6 +31,13 @@ example: build-macos
 	cd examples/hello-world && ../../bin/docops -server
 
 ##
+## Regenerate embedded assets (e.g. minified CSS) from their sources.
+##
+.PHONY: generate
+generate:
+	$(GO) generate ./...
+
+##
 ## Format all Go source files.
 ##
 .PHONY: format fmt

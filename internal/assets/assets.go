@@ -3,7 +3,10 @@ package assets
 
 import _ "embed"
 
-// CSS is the stylesheet inlined into generated HTML pages.
+//go:generate go run ../../cmd/minifycss -in style.css -out style.min.css
+
+// CSS is the minified stylesheet inlined into generated HTML pages.
+// It is generated from style.css; run `go generate ./...` after editing it.
 //
-//go:embed style.css
+//go:embed style.min.css
 var CSS string

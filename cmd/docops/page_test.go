@@ -38,7 +38,7 @@ func TestHTMLWriterRenderWithoutTitles(t *testing.T) {
 	if strings.Contains(got, "<ul>") {
 		t.Errorf("HTML = %q, want no list without titles", got)
 	}
-	if !strings.Contains(got, "<style>") || !strings.Contains(got, ":not(pre) > code") {
+	if !strings.Contains(got, "<style>") || !strings.Contains(got, ":not(pre)>code") {
 		t.Errorf("HTML = %q, want inlined, unescaped CSS", got)
 	}
 	if strings.Contains(got, `<link rel="stylesheet"`) {

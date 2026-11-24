@@ -98,7 +98,7 @@ func TestServerModeServesHelloWorld(t *testing.T) {
 		!strings.Contains(got, "<li>Hello World Events</li>") {
 		t.Errorf("response body = %q, want semantic HTML with greeting and AsyncAPI title", got)
 	}
-	if !strings.Contains(got, "<style>") || !strings.Contains(got, ":not(pre) > code") {
+	if !strings.Contains(got, "<style>") || !strings.Contains(got, ":not(pre)>code") {
 		t.Errorf("response body = %q, want inlined CSS", got)
 	}
 	if strings.Contains(got, `<link rel="stylesheet"`) {
