@@ -53,6 +53,15 @@ func (t htmlText) writeHTML(w io.Writer) error {
 	return err
 }
 
+// htmlRaw writes trusted markup verbatim. It is used for the embedded
+// stylesheet, where HTML escaping would corrupt CSS selectors such as `>`.
+type htmlRaw string
+
+func (r htmlRaw) writeHTML(w io.Writer) error {
+	_, err := io.WriteString(w, string(r))
+	return err
+}
+
 func htmlH1(text string) htmlNode {
 	return htmlElement{tag: "h1", children: []htmlNode{htmlText(text)}}
 }

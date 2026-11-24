@@ -2,6 +2,8 @@ package main
 
 import (
 	"io"
+
+	"github.com/olle/docops/internal/assets"
 )
 
 type htmlWriter struct{}
@@ -27,6 +29,7 @@ func (htmlWriter) Render(w io.Writer, msg message) error {
 			htmlElement{tag: "head", children: []htmlNode{
 				htmlElement{tag: "meta", attrs: []htmlAttribute{{name: "charset", value: "utf-8"}}, void: true},
 				htmlElement{tag: "title", children: []htmlNode{htmlText(msg.greeting)}},
+				htmlElement{tag: "style", children: []htmlNode{htmlRaw(assets.CSS)}},
 			}},
 			htmlElement{tag: "body", children: []htmlNode{
 				htmlElement{tag: "main", children: body},
