@@ -7,9 +7,14 @@ import (
 
 type outputWriter interface {
 	Render(w io.Writer, name string, titles []string) error
+	ContentType() string
 }
 
 type plainTextWriter struct{}
+
+func (plainTextWriter) ContentType() string {
+	return "text/plain; charset=utf-8"
+}
 
 func (plainTextWriter) Render(w io.Writer, name string, titles []string) error {
 	if _, err := fmt.Fprintf(w, "Hello %s!", name); err != nil {

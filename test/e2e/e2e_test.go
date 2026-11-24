@@ -89,9 +89,14 @@ func TestServerModeServesHelloWorld(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading response: %v", err)
 	}
+	if got, want := resp.Header.Get("Content-Type"), "text/html; charset=utf-8"; got != want {
+		t.Errorf("Content-Type = %q, want %q", got, want)
+	}
 	got := string(body)
-	if !strings.Contains(got, "Hello World!") || !strings.Contains(got, "Hello World Events") {
-		t.Errorf("response body = %q, want greeting and AsyncAPI title", got)
+	if !strings.Contains(got, "<!doctype html>") ||
+		!strings.Contains(got, "<h1>Hello World!</h1>") ||
+		!strings.Contains(got, "<li>Hello World Events</li>") {
+		t.Errorf("response body = %q, want semantic HTML with greeting and AsyncAPI title", got)
 	}
 }
 

@@ -12,7 +12,7 @@ run: verify
 ## Cross-compile the docops Go binary for macOS.
 ## Outputs to bin/docops.
 ##
-.PHONY: build
+.PHONY: build build-macos
 build: fmt verify build-macos
 	@echo "Build complete. Binaries in bin/"
 	@ls -lh bin/*
@@ -21,6 +21,14 @@ build-macos:
 	@mkdir -p bin
 	@echo "Building docops for macOS..."
 	GOOS=darwin GOARCH=arm64 $(GO) build -o bin/docops ./cmd/docops
+
+##
+## Build and serve the example project from its own folder.
+##
+.PHONY: example
+example: build-macos
+	@echo "Serving examples/hello-world at http://localhost:8080"
+	cd examples/hello-world && ../../bin/docops -server
 
 ##
 ## Format all Go source files.

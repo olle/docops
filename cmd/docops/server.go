@@ -28,7 +28,7 @@ func (stdHTTPServer) ListenAndServe(addr string, handler http.Handler) error {
 
 func handlerFor(writer outputWriter, titles []string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Content-Type", writer.ContentType())
 		if err := writer.Render(w, "World", titles); err != nil {
 			log.Printf("rendering response: %v", err)
 		}

@@ -11,7 +11,8 @@ func main() {
 	addr := flag.String("addr", defaultAddr, "address to listen on in server mode")
 	flag.Parse()
 
-	writer := plainTextWriter{}
+	textWriter := plainTextWriter{}
+	htmlOutput := htmlWriter{}
 	var cmd command
 	if *serverMode {
 		cmd = serveCommand{
@@ -19,11 +20,11 @@ func main() {
 			root:   ".",
 			finder: globDocumentFinder{},
 			parser: fileDocumentParser{},
-			writer: writer,
+			writer: htmlOutput,
 			server: stdHTTPServer{},
 		}
 	} else {
-		cmd = greetCommand{name: *name, writer: writer}
+		cmd = greetCommand{name: *name, writer: textWriter}
 	}
 
 	if err := cmd.Run(); err != nil {
