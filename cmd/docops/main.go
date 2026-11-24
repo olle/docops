@@ -18,6 +18,7 @@ func main() {
 		cmd = serveCommand{
 			addr:   *addr,
 			root:   ".",
+			name:   *name,
 			finder: globDocumentFinder{},
 			parser: fileDocumentParser{},
 			writer: htmlOutput,

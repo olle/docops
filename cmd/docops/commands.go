@@ -15,12 +15,13 @@ type greetCommand struct {
 }
 
 func (c greetCommand) Run() error {
-	return c.writer.Render(os.Stdout, c.name, nil)
+	return c.writer.Render(os.Stdout, newMessage(c.name, nil))
 }
 
 type serveCommand struct {
 	addr   string
 	root   string
+	name   string
 	finder documentFinder
 	parser documentParser
 	writer outputWriter
@@ -32,5 +33,5 @@ func (c serveCommand) Run() error {
 	if err != nil {
 		log.Printf("reading AsyncAPI documents: %v", err)
 	}
-	return c.server.ListenAndServe(c.addr, handlerFor(c.writer, titles))
+	return c.server.ListenAndServe(c.addr, handlerFor(c.writer, newMessage(c.name, titles)))
 }

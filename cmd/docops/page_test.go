@@ -8,7 +8,8 @@ import (
 
 func TestHTMLWriterRender(t *testing.T) {
 	var buf bytes.Buffer
-	if err := (htmlWriter{}).Render(&buf, "Ada & Bob", []string{"<Events>"}); err != nil {
+	msg := newMessage("Ada & Bob", []string{"<Events>"})
+	if err := (htmlWriter{}).Render(&buf, msg); err != nil {
 		t.Fatal(err)
 	}
 
@@ -22,7 +23,7 @@ func TestHTMLWriterRender(t *testing.T) {
 
 func TestHTMLWriterRenderWithoutTitles(t *testing.T) {
 	var buf bytes.Buffer
-	if err := (htmlWriter{}).Render(&buf, "World", nil); err != nil {
+	if err := (htmlWriter{}).Render(&buf, newMessage("World", nil)); err != nil {
 		t.Fatal(err)
 	}
 

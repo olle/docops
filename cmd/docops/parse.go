@@ -2,61 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
-
-var documentGlobs = []string{"*.yaml", "*.yml", "*.json"}
-
-type document struct {
-	asyncAPI string
-	title    string
-}
-
-type documentFinder interface {
-	Find(root string) ([]string, error)
-}
-
-type documentParser interface {
-	Parse(path string) (document, error)
-}
-
-type globDocumentFinder struct{}
-
-func (globDocumentFinder) Find(root string) ([]string, error) {
-	var paths []string
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			if path != root && (strings.HasPrefix(entry.Name(), ".") || entry.Name() == "bin") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		for _, pattern := range documentGlobs {
-			matched, err := filepath.Match(pattern, entry.Name())
-			if err != nil {
-				return err
-			}
-			if matched {
-				paths = append(paths, path)
-				return nil
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return paths, nil
-}
 
 type fileDocumentParser struct{}
 
@@ -69,27 +18,6 @@ func (fileDocumentParser) Parse(path string) (document, error) {
 		return parseJSONDocument(data)
 	}
 	return parseYAMLDocument(data), nil
-}
-
-func collectTitles(root string, finder documentFinder, parser documentParser) ([]string, error) {
-	paths, err := finder.Find(root)
-	if err != nil {
-		return nil, err
-	}
-
-	var titles []string
-	var errs []error
-	for _, path := range paths {
-		doc, err := parser.Parse(path)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", path, err))
-			continue
-		}
-		if doc.asyncAPI != "" && doc.title != "" {
-			titles = append(titles, doc.title)
-		}
-	}
-	return titles, errors.Join(errs...)
 }
 
 type jsonDocument struct {
@@ -153,11 +81,11 @@ func parseYAMLDocument(data []byte) document {
 }
 
 func splitField(s string) (string, string) {
-	idx := strings.Index(s, ":")
-	if idx < 0 {
+	key, value, found := strings.Cut(s, ":")
+	if !found {
 		return s, ""
 	}
-	return strings.TrimSpace(s[:idx]), strings.TrimSpace(s[idx+1:])
+	return strings.TrimSpace(key), strings.TrimSpace(value)
 }
 
 func scalar(value string) string {
