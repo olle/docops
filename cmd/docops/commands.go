@@ -17,6 +17,20 @@ func messageFor(info informationSource) message {
 	return msg
 }
 
+type debugCommand struct {
+	source catalogSource
+	out    io.Writer
+}
+
+func (c debugCommand) Run() error {
+	documents, err := c.source.Catalog()
+	if err != nil {
+		return err
+	}
+	_, err = io.WriteString(c.out, documents.String())
+	return err
+}
+
 type greetCommand struct {
 	info      informationSource
 	presenter presenter

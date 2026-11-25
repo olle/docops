@@ -4,6 +4,10 @@ type informationSource interface {
 	Message() (message, error)
 }
 
+type catalogSource interface {
+	Catalog() (catalog, error)
+}
+
 type documentInformation struct {
 	name    string
 	root    string

@@ -53,6 +53,42 @@ func TestHelloUsesDefaultName(t *testing.T) {
 	}
 }
 
+func TestDebugFlagDumpsCatalog(t *testing.T) {
+	cmd := exec.Command(docopsBinary, "-debug")
+	cmd.Dir = repoRoot
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("running docops -debug: %v\n%s", err, output)
+	}
+
+	got := string(output)
+	for _, want := range []string{
+		"catalog:",
+		"kind: AsyncAPI",
+		"kind: OpenAPI",
+		`title: "Hello World Events"`,
+		`title: "Hello World API"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("debug output = %q, want %q", got, want)
+		}
+	}
+}
+
+func TestHelpOmitsDebugFlag(t *testing.T) {
+	cmd := exec.Command(docopsBinary, "-h")
+	cmd.Dir = repoRoot
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("running docops -h: %v\n%s", err, output)
+	}
+
+	got := string(output)
+	if strings.Contains(got, "-debug") || strings.Contains(got, "  -d\n") {
+		t.Errorf("help output = %q, want debug flags hidden", got)
+	}
+}
+
 func TestTUIModeRendersMessage(t *testing.T) {
 	cmd := exec.Command(docopsBinary, "-tui")
 	cmd.Dir = repoRoot

@@ -1,11 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+)
+
+var (
+	_ fmt.Stringer = catalog{}
+	_ fmt.Stringer = specification{}
+	_ fmt.Stringer = specificationStructure{}
+	_ fmt.Stringer = specificationSummary{}
+	_ fmt.Stringer = kindAsyncAPI
 )
 
 func TestCollectDocumentsFromYAMLAndJSONCandidates(t *testing.T) {
@@ -77,5 +86,56 @@ func TestCatalogSummariesUseTitleOrNameAndKind(t *testing.T) {
 	}
 	if got := documents.Summaries(); !slices.Equal(got, want) {
 		t.Errorf("summaries = %+v, want %+v", got, want)
+	}
+}
+
+func TestCatalogStringCascadesFullModel(t *testing.T) {
+	documents := catalog{documents: []specification{{
+		source:      "events.yaml",
+		kind:        kindAsyncAPI,
+		specVersion: "3.0.0",
+		version:     "1.2.3",
+		title:       "Events API",
+		description: "Event stream.",
+		structure: specificationStructure{
+			channels:   []string{"farewells", "greetings"},
+			operations: []string{"publishGreeting"},
+		},
+	}}}
+
+	want := `catalog:
+  count: 1
+  documents:
+    - specification:
+      source: "events.yaml"
+      kind: AsyncAPI
+      specVersion: "3.0.0"
+      version: "1.2.3"
+      title: "Events API"
+      name: ""
+      description: "Event stream."
+      structure:
+        channels: ["farewells", "greetings"]
+        operations: ["publishGreeting"]
+        paths: []
+`
+	if got := documents.String(); got != want {
+		t.Errorf("String() = %q, want %q", got, want)
+	}
+	if got := fmt.Sprint(documents); got != want {
+		t.Errorf("fmt.Sprint = %q, want %q", got, want)
+	}
+}
+
+func TestCatalogStringEmpty(t *testing.T) {
+	if got, want := (catalog{}).String(), "catalog:\n  count: 0\n"; got != want {
+		t.Errorf("String() = %q, want %q", got, want)
+	}
+}
+
+func TestSpecificationSummaryString(t *testing.T) {
+	summary := specificationSummary{kind: kindOpenAPI, title: "HTTP API"}
+	if got, want := summary.String(), "OpenAPI: HTTP API"; got != want {
+		t.Errorf("String() = %q, want %q", got, want)
 	}
 }

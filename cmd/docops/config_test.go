@@ -22,6 +22,42 @@ func TestParseConfigMDFlag(t *testing.T) {
 	}
 }
 
+func TestParseConfigDebugFlags(t *testing.T) {
+	for _, name := range []string{"-debug", "--debug", "-d", "--d"} {
+		t.Run(name, func(t *testing.T) {
+			cfg, err := parseConfig([]string{name})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cfg.debug || cfg.server || cfg.tui || cfg.html || cfg.markdown {
+				t.Errorf("config = %+v, want debug only", cfg)
+			}
+		})
+	}
+}
+
+func TestParseConfigDebugFalse(t *testing.T) {
+	cfg, err := parseConfig([]string{"-d=false"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.debug {
+		t.Errorf("config = %+v, want debug disabled", cfg)
+	}
+}
+
+func TestParseConfigRejectsInvalidDebugValue(t *testing.T) {
+	if _, err := parseConfig([]string{"-debug=maybe"}); err == nil {
+		t.Error("expected invalid debug value to fail")
+	}
+}
+
+func TestParseConfigRejectsDebugWithHTML(t *testing.T) {
+	if _, err := parseConfig([]string{"-debug", "-html"}); err == nil {
+		t.Error("expected -debug with -html to fail")
+	}
+}
+
 func TestParseConfigRejectsMarkdownFlag(t *testing.T) {
 	if _, err := parseConfig([]string{"-markdown"}); err == nil {
 		t.Error("expected removed -markdown flag to fail")

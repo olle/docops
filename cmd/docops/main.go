@@ -3,8 +3,10 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -18,6 +20,7 @@ type config struct {
 	tui      bool
 	html     bool
 	markdown bool
+	debug    bool
 	addr     string
 }
 
@@ -69,6 +72,11 @@ func main() {
 }
 
 func parseConfig(args []string) (config, error) {
+	args, debug, err := parseDebugArgs(args)
+	if err != nil {
+		return config{}, err
+	}
+
 	fs := flag.NewFlagSet("docops", flag.ContinueOnError)
 
 	server := serverFlag{addr: defaultAddr}
@@ -82,13 +90,13 @@ func parseConfig(args []string) (config, error) {
 	}
 
 	modes := 0
-	for _, enabled := range []bool{server.enabled, *tui, *html, *md} {
+	for _, enabled := range []bool{server.enabled, *tui, *html, *md, debug} {
 		if enabled {
 			modes++
 		}
 	}
 	if modes > 1 {
-		return config{}, errors.New("only one of -server, -tui, -html, or -md can be used at a time")
+		return config{}, errors.New("only one of -server, -tui, -html, -md, or -debug can be used at a time")
 	}
 
 	return config{
@@ -96,6 +104,7 @@ func parseConfig(args []string) (config, error) {
 		tui:      *tui,
 		html:     *html,
 		markdown: *md,
+		debug:    debug,
 		addr:     server.addr,
 	}, nil
 }
@@ -112,4 +121,27 @@ func normalizeServerArgs(args []string) []string {
 		normalized = append(normalized, arg)
 	}
 	return normalized
+}
+
+func parseDebugArgs(args []string) ([]string, bool, error) {
+	remaining := make([]string, 0, len(args))
+	debug := false
+	for _, arg := range args {
+		name, value, hasValue := strings.Cut(arg, "=")
+		switch name {
+		case "-debug", "--debug", "-d", "--d":
+			if !hasValue {
+				debug = true
+				continue
+			}
+			enabled, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, false, fmt.Errorf("invalid debug value %q: %w", value, err)
+			}
+			debug = enabled
+		default:
+			remaining = append(remaining, arg)
+		}
+	}
+	return remaining, debug, nil
 }

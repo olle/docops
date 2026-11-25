@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,15 @@ type fakeInformation struct {
 
 func (f fakeInformation) Message() (message, error) {
 	return f.msg, nil
+}
+
+type fakeCatalogSource struct {
+	cat catalog
+	err error
+}
+
+func (f fakeCatalogSource) Catalog() (catalog, error) {
+	return f.cat, f.err
 }
 
 type recordingPresenter struct {
@@ -111,5 +121,25 @@ func TestServeCommandUsesOnlyInformationAndPresenter(t *testing.T) {
 	}
 	if got := recorder.Body.String(); got != "rendered:Hello Ada!" {
 		t.Errorf("body = %q, want %q", got, "rendered:Hello Ada!")
+	}
+}
+
+func TestDebugCommandDumpsCatalogString(t *testing.T) {
+	var out bytes.Buffer
+	documents := catalog{documents: []specification{{kind: kindAsyncAPI, title: "Events API"}}}
+	command := debugCommand{source: fakeCatalogSource{cat: documents}, out: &out}
+	if err := command.Run(); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := out.String(), documents.String(); got != want {
+		t.Errorf("debug output = %q, want %q", got, want)
+	}
+}
+
+func TestDebugCommandPropagatesCatalogError(t *testing.T) {
+	wantErr := errors.New("catalog unavailable")
+	command := debugCommand{source: fakeCatalogSource{err: wantErr}, out: io.Discard}
+	if err := command.Run(); !errors.Is(err, wantErr) {
+		t.Errorf("error = %v, want %v", err, wantErr)
 	}
 }

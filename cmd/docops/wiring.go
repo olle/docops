@@ -9,6 +9,11 @@ func commandFor(cfg config) (command, error) {
 	}
 
 	switch {
+	case cfg.debug:
+		return debugCommand{
+			source: documentSource(root),
+			out:    os.Stdout,
+		}, nil
 	case cfg.server:
 		return serveCommand{
 			addr:      cfg.addr,
@@ -36,7 +41,7 @@ func commandFor(cfg config) (command, error) {
 	}
 }
 
-func documentSource(root string) informationSource {
+func documentSource(root string) documentInformation {
 	return documentInformation{
 		name:    defaultName,
 		root:    root,

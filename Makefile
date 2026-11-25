@@ -6,7 +6,7 @@ all: build run
 
 .PHONY: run
 run: verify
-	$(GO) run ./cmd/docops -h
+	$(GO) run ./cmd/docops -d
 
 ##
 ## Cross-compile the docops Go binary for macOS.
