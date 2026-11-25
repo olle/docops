@@ -15,10 +15,11 @@ func TestDocumentInformationBuildsMessage(t *testing.T) {
 	}
 
 	source := documentInformation{
-		name:   "Ada",
-		root:   root,
-		finder: documentNameFinder{},
-		parser: fileDocumentParser{},
+		name:    "Ada",
+		root:    root,
+		finder:  documentGlobFinder{},
+		sniffer: fileDocumentSniffer{},
+		parser:  fileDocumentParser{},
 	}
 	msg, err := source.Message()
 	if err != nil {

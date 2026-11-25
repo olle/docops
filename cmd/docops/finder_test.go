@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestDocumentNameFinder(t *testing.T) {
+func TestDocumentGlobFinder(t *testing.T) {
 	root := t.TempDir()
 	for _, dir := range []string{".hidden", "bin"} {
 		if err := os.Mkdir(filepath.Join(root, dir), 0o755); err != nil {
@@ -22,22 +22,24 @@ func TestDocumentNameFinder(t *testing.T) {
 		}
 	}
 	for _, path := range []string{
-		filepath.Join(root, "asyncapi.yaml"),
-		filepath.Join(root, "openapi.yaml"),
+		filepath.Join(root, "data.json"),
+		filepath.Join(root, "notes.yml"),
 		filepath.Join(root, "spec.yaml"),
-		filepath.Join(root, ".hidden", "asyncapi.yaml"),
-		filepath.Join(root, "bin", "openapi.yaml"),
+		filepath.Join(root, "readme.md"),
+		filepath.Join(root, ".hidden", "spec.yaml"),
+		filepath.Join(root, "bin", "spec.yaml"),
 	} {
 		write(path)
 	}
 
-	paths, err := (documentNameFinder{}).Find(root)
+	paths, err := (documentGlobFinder{}).Find(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := []string{
-		filepath.Join(root, "asyncapi.yaml"),
-		filepath.Join(root, "openapi.yaml"),
+		filepath.Join(root, "data.json"),
+		filepath.Join(root, "notes.yml"),
+		filepath.Join(root, "spec.yaml"),
 	}
 	if !slices.Equal(paths, want) {
 		t.Errorf("paths = %q, want %q", paths, want)

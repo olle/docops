@@ -5,14 +5,15 @@ type informationSource interface {
 }
 
 type documentInformation struct {
-	name   string
-	root   string
-	finder documentFinder
-	parser documentParser
+	name    string
+	root    string
+	finder  documentFinder
+	sniffer documentSniffer
+	parser  documentParser
 }
 
 func (i documentInformation) Catalog() (catalog, error) {
-	return collectDocuments(i.root, i.finder, i.parser)
+	return collectDocuments(i.root, i.finder, i.sniffer, i.parser)
 }
 
 func (i documentInformation) Message() (message, error) {

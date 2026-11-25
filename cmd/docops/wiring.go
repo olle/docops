@@ -38,10 +38,11 @@ func commandFor(cfg config) (command, error) {
 
 func documentSource(root string) informationSource {
 	return documentInformation{
-		name:   defaultName,
-		root:   root,
-		finder: documentNameFinder{},
-		parser: fileDocumentParser{},
+		name:    defaultName,
+		root:    root,
+		finder:  documentGlobFinder{},
+		sniffer: fileDocumentSniffer{},
+		parser:  fileDocumentParser{},
 	}
 }
 
