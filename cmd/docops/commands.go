@@ -1,52 +1,48 @@
 package main
 
 import (
+	"io"
 	"log"
-	"os"
 )
 
 type command interface {
 	Run() error
 }
 
-func commandFor(cfg config) command {
-	if cfg.server {
-		return serveCommand{
-			addr:   cfg.addr,
-			root:   ".",
-			name:   cfg.name,
-			finder: globDocumentFinder{},
-			parser: fileDocumentParser{},
-			writer: htmlWriter{},
-			server: stdHTTPServer{},
-		}
+func messageFor(info informationSource) message {
+	msg, err := info.Message()
+	if err != nil {
+		log.Printf("reading information: %v", err)
 	}
-	return greetCommand{name: cfg.name, writer: plainTextWriter{}}
+	return msg
 }
 
 type greetCommand struct {
-	name   string
-	writer outputWriter
+	info      informationSource
+	presenter presenter
+	out       io.Writer
 }
 
 func (c greetCommand) Run() error {
-	return c.writer.Render(os.Stdout, newMessage(c.name, nil))
+	return c.presenter.Render(c.out, messageFor(c.info))
 }
 
 type serveCommand struct {
-	addr   string
-	root   string
-	name   string
-	finder documentFinder
-	parser documentParser
-	writer outputWriter
-	server httpServer
+	addr      string
+	info      informationSource
+	presenter webPresenter
+	server    httpServer
 }
 
 func (c serveCommand) Run() error {
-	titles, err := collectTitles(c.root, c.finder, c.parser)
-	if err != nil {
-		log.Printf("reading AsyncAPI documents: %v", err)
-	}
-	return c.server.ListenAndServe(c.addr, handlerFor(c.writer, newMessage(c.name, titles)))
+	return c.server.ListenAndServe(c.addr, handlerFor(c.presenter, messageFor(c.info)))
+}
+
+type tuiCommand struct {
+	info      informationSource
+	presenter screenPresenter
+}
+
+func (c tuiCommand) Run() error {
+	return c.presenter.Present(messageFor(c.info))
 }

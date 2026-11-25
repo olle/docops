@@ -53,6 +53,26 @@ func TestHelloNameResolvesName(t *testing.T) {
 	}
 }
 
+func TestTUIModeRendersMessage(t *testing.T) {
+	cmd := exec.Command(docopsBinary, "-tui")
+	cmd.Dir = repoRoot
+	cmd.Stdin = strings.NewReader("q\n")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("running docops -tui: %v\n%s", err, output)
+	}
+
+	got := string(output)
+	for _, want := range []string{"Hello World!", "AsyncAPI documents:", "Hello World Events", "q: quit"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("TUI output = %q, want %q", got, want)
+		}
+	}
+	if strings.Contains(got, "<html") {
+		t.Errorf("TUI output = %q, want no HTML", got)
+	}
+}
+
 func TestServerModeServesHelloWorld(t *testing.T) {
 	addr := freeAddr(t)
 	cmd := exec.Command(docopsBinary, "--server", "--addr", addr)

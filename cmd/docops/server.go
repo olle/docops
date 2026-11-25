@@ -26,10 +26,10 @@ func (stdHTTPServer) ListenAndServe(addr string, handler http.Handler) error {
 	return err
 }
 
-func handlerFor(writer outputWriter, msg message) http.Handler {
+func handlerFor(presenter webPresenter, msg message) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", writer.ContentType())
-		if err := writer.Render(w, msg); err != nil {
+		w.Header().Set("Content-Type", presenter.ContentType())
+		if err := presenter.Render(w, msg); err != nil {
 			log.Printf("rendering response: %v", err)
 		}
 	})

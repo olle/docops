@@ -4,16 +4,7 @@ import (
 	"io"
 )
 
-type outputWriter interface {
-	Render(w io.Writer, msg message) error
-	ContentType() string
-}
-
 type plainTextWriter struct{}
-
-func (plainTextWriter) ContentType() string {
-	return "text/plain; charset=utf-8"
-}
 
 func (plainTextWriter) Render(w io.Writer, msg message) error {
 	if _, err := io.WriteString(w, msg.greeting); err != nil {
