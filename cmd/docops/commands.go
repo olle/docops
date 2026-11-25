@@ -9,6 +9,21 @@ type command interface {
 	Run() error
 }
 
+func commandFor(cfg config) command {
+	if cfg.server {
+		return serveCommand{
+			addr:   cfg.addr,
+			root:   ".",
+			name:   cfg.name,
+			finder: globDocumentFinder{},
+			parser: fileDocumentParser{},
+			writer: htmlWriter{},
+			server: stdHTTPServer{},
+		}
+	}
+	return greetCommand{name: cfg.name, writer: plainTextWriter{}}
+}
+
 type greetCommand struct {
 	name   string
 	writer outputWriter

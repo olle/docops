@@ -1,36 +1,43 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
+	"os"
 )
 
-func main() {
-	name := flag.String("name", "World", "name to greet")
-	serverMode := flag.Bool("server", false, "run an HTTP server that greets visitors")
-	addr := flag.String("addr", defaultAddr, "address to listen on in server mode")
-	flag.Parse()
+const defaultAddr = "127.0.0.1:8080"
 
-	textWriter := plainTextWriter{}
-	htmlOutput := htmlWriter{}
-	var cmd command
-	if *serverMode {
-		cmd = serveCommand{
-			addr:   *addr,
-			root:   ".",
-			name:   *name,
-			finder: globDocumentFinder{},
-			parser: fileDocumentParser{},
-			writer: htmlOutput,
-			server: stdHTTPServer{},
-		}
-	} else {
-		cmd = greetCommand{name: *name, writer: textWriter}
+type config struct {
+	name   string
+	server bool
+	addr   string
+}
+
+func main() {
+	cfg, err := parseConfig(os.Args[1:])
+	if errors.Is(err, flag.ErrHelp) {
+		return
+	}
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	if err := cmd.Run(); err != nil {
+	if err := commandFor(cfg).Run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-const defaultAddr = ":8080"
+func parseConfig(args []string) (config, error) {
+	fs := flag.NewFlagSet("docops", flag.ContinueOnError)
+
+	name := fs.String("name", "World", "name to greet")
+	server := fs.Bool("server", false, "run an HTTP server that greets visitors")
+	addr := fs.String("addr", defaultAddr, "address to listen on in server mode")
+
+	if err := fs.Parse(args); err != nil {
+		return config{}, err
+	}
+	return config{name: *name, server: *server, addr: *addr}, nil
+}
