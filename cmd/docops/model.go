@@ -10,9 +10,10 @@ import (
 type specificationKind string
 
 const (
-	kindUnknown  specificationKind = ""
-	kindAsyncAPI specificationKind = "asyncapi"
-	kindOpenAPI  specificationKind = "openapi"
+	kindUnknown    specificationKind = ""
+	kindAsyncAPI   specificationKind = "asyncapi"
+	kindOpenAPI    specificationKind = "openapi"
+	kindJSONSchema specificationKind = "jsonschema"
 )
 
 func (k specificationKind) Label() string {
@@ -21,6 +22,8 @@ func (k specificationKind) Label() string {
 		return "AsyncAPI"
 	case kindOpenAPI:
 		return "OpenAPI"
+	case kindJSONSchema:
+		return "JSON Schema"
 	default:
 		return "Unknown"
 	}
@@ -34,12 +37,14 @@ type specificationStructure struct {
 	channels   []string
 	operations []string
 	paths      []string
+	properties []string
 }
 
 type specification struct {
 	source      string
 	kind        specificationKind
 	specVersion string
+	id          string
 	version     string
 	title       string
 	name        string
@@ -112,6 +117,7 @@ func (s specificationStructure) String() string {
 	fmt.Fprintf(&b, "  channels: %s\n", debugStringList(s.channels))
 	fmt.Fprintf(&b, "  operations: %s\n", debugStringList(s.operations))
 	fmt.Fprintf(&b, "  paths: %s\n", debugStringList(s.paths))
+	fmt.Fprintf(&b, "  properties: %s\n", debugStringList(s.properties))
 	return b.String()
 }
 
@@ -121,6 +127,7 @@ func (s specification) String() string {
 	fmt.Fprintf(&b, "  source: %q\n", s.source)
 	fmt.Fprintf(&b, "  kind: %s\n", s.kind)
 	fmt.Fprintf(&b, "  specVersion: %q\n", s.specVersion)
+	fmt.Fprintf(&b, "  id: %q\n", s.id)
 	fmt.Fprintf(&b, "  version: %q\n", s.version)
 	fmt.Fprintf(&b, "  title: %q\n", s.title)
 	fmt.Fprintf(&b, "  name: %q\n", s.name)

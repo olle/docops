@@ -15,6 +15,7 @@ func TestDetectSpecificationKindYAML(t *testing.T) {
 	}{
 		{name: "asyncapi", prefix: "asyncapi: 3.0.0\n", want: kindAsyncAPI},
 		{name: "openapi", prefix: "openapi: 3.1.0\n", want: kindOpenAPI},
+		{name: "json schema", prefix: "$schema: https://json-schema.org/draft/2020-12/schema\n", want: kindJSONSchema},
 		{name: "nested marker", prefix: "description:\n  asyncapi: nested\n", want: kindUnknown},
 		{name: "unrelated yaml", prefix: "name: example\n", want: kindUnknown},
 	}
@@ -33,6 +34,9 @@ func TestDetectSpecificationKindJSON(t *testing.T) {
 	}
 	if got := detectSpecificationKind(`{"openapi":"3.1.0","info":{}}`); got != kindOpenAPI {
 		t.Errorf("kind = %q, want %q", got, kindOpenAPI)
+	}
+	if got := detectSpecificationKind(`{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"Example"}`); got != kindJSONSchema {
+		t.Errorf("kind = %q, want %q", got, kindJSONSchema)
 	}
 }
 

@@ -39,6 +39,14 @@ func detectSpecificationKind(prefix string) specificationKind {
 		if strings.HasPrefix(line, "openapi:") {
 			return kindOpenAPI
 		}
+		if strings.HasPrefix(line, "$schema:") && strings.Contains(line, "json-schema.org") {
+			return kindJSONSchema
+		}
+	}
+
+	schema := strings.Index(prefix, `"$schema"`)
+	if schema >= 0 && strings.Contains(prefix[schema:], "json-schema.org") {
+		return kindJSONSchema
 	}
 
 	async := strings.Index(prefix, `"asyncapi"`)

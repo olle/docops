@@ -17,6 +17,10 @@ func TestDocumentInformationBuildsMessage(t *testing.T) {
 	if err := os.WriteFile(openPath, []byte(`{"openapi":"3.1.0","info":{"title":"Hello World API"}}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	schemaPath := filepath.Join(root, "jsonschema.json")
+	if err := os.WriteFile(schemaPath, []byte(`{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"Hello World Schema"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	source := documentInformation{
 		name:    "Ada",
@@ -34,6 +38,7 @@ func TestDocumentInformationBuildsMessage(t *testing.T) {
 	}
 	want := []specificationSummary{
 		{kind: kindAsyncAPI, title: "Events API"},
+		{kind: kindJSONSchema, title: "Hello World Schema"},
 		{kind: kindOpenAPI, title: "Hello World API"},
 	}
 	if !slices.Equal(msg.specifications, want) {

@@ -65,8 +65,10 @@ func TestDebugFlagDumpsCatalog(t *testing.T) {
 	for _, want := range []string{
 		"catalog:",
 		"kind: AsyncAPI",
+		"kind: JSON Schema",
 		"kind: OpenAPI",
 		`title: "Hello World Events"`,
+		`title: "Hello World Schema"`,
 		`title: "Hello World API"`,
 	} {
 		if !strings.Contains(got, want) {
@@ -103,6 +105,7 @@ func TestTUIModeRendersMessage(t *testing.T) {
 		"Hello World!",
 		"Specifications:",
 		"AsyncAPI: Hello World Events",
+		"JSON Schema: Hello World Schema",
 		"OpenAPI: Hello World API",
 		"q: quit",
 	} {
@@ -129,6 +132,7 @@ func TestHTMLFlagOutput(t *testing.T) {
 		"<h1>Hello World!</h1>",
 		"<h2>Specifications</h2>",
 		"<li><strong>AsyncAPI</strong>: Hello World Events</li>",
+		"<li><strong>JSON Schema</strong>: Hello World Schema</li>",
 		"<li><strong>OpenAPI</strong>: Hello World API</li>",
 		"<style>",
 	} {
@@ -151,6 +155,7 @@ func TestMDFlagOutput(t *testing.T) {
 		"# Hello World!",
 		"## Specifications",
 		"- AsyncAPI: Hello World Events",
+		"- JSON Schema: Hello World Schema",
 		"- OpenAPI: Hello World API",
 	} {
 		if !strings.Contains(got, want) {
@@ -206,6 +211,7 @@ func TestServerModeServesHelloWorld(t *testing.T) {
 		!strings.Contains(got, "<h1>Hello World!</h1>") ||
 		!strings.Contains(got, "<h2>Specifications</h2>") ||
 		!strings.Contains(got, "<li><strong>AsyncAPI</strong>: Hello World Events</li>") ||
+		!strings.Contains(got, "<li><strong>JSON Schema</strong>: Hello World Schema</li>") ||
 		!strings.Contains(got, "<li><strong>OpenAPI</strong>: Hello World API</li>") {
 		t.Errorf("response body = %q, want semantic HTML with greeting and specifications", got)
 	}

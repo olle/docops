@@ -24,6 +24,8 @@ func (fileDocumentParser) Parse(path string) (specification, error) {
 type rawSpecification struct {
 	asyncAPI    string
 	openAPI     string
+	jsonSchema  string
+	id          string
 	name        string
 	title       string
 	description string
@@ -31,6 +33,7 @@ type rawSpecification struct {
 	channels    []string
 	operations  []string
 	paths       []string
+	properties  []string
 }
 
 func parseJSONDocument(path string, data []byte) (specification, error) {
@@ -40,12 +43,18 @@ func parseJSONDocument(path string, data []byte) (specification, error) {
 	}
 
 	parsed := rawSpecification{
-		asyncAPI:   stringValue(raw["asyncapi"]),
-		openAPI:    stringValue(raw["openapi"]),
-		name:       stringValue(raw["name"]),
-		channels:   objectKeys(raw["channels"]),
-		operations: objectKeys(raw["operations"]),
-		paths:      objectKeys(raw["paths"]),
+		asyncAPI:    stringValue(raw["asyncapi"]),
+		openAPI:     stringValue(raw["openapi"]),
+		jsonSchema:  stringValue(raw["$schema"]),
+		id:          preferredTitle(stringValue(raw["$id"]), stringValue(raw["id"])),
+		name:        stringValue(raw["name"]),
+		title:       stringValue(raw["title"]),
+		description: stringValue(raw["description"]),
+		version:     stringValue(raw["version"]),
+		channels:    objectKeys(raw["channels"]),
+		operations:  objectKeys(raw["operations"]),
+		paths:       objectKeys(raw["paths"]),
+		properties:  objectKeys(raw["properties"]),
 	}
 	if info, ok := raw["info"].(map[string]any); ok {
 		parsed.title = preferredTitle(stringValue(info["title"]), stringValue(info["name"]))
@@ -80,15 +89,31 @@ func parseYAMLDocument(path string, data []byte) specification {
 				raw.asyncAPI = scalar(value)
 			case "openapi":
 				raw.openAPI = scalar(value)
+			case "$schema":
+				raw.jsonSchema = scalar(value)
+			case "$id", "id":
+				raw.id = scalar(value)
 			case "name":
 				raw.name = scalar(value)
+			case "title":
+				if raw.title == "" {
+					raw.title = scalar(value)
+				}
+			case "description":
+				if raw.description == "" {
+					raw.description = scalar(value)
+				}
+			case "version":
+				if raw.version == "" {
+					raw.version = scalar(value)
+				}
 			case "info":
 				info := flowInfo(value)
 				raw.title = preferredTitle(info.title, info.name, raw.title)
 				raw.description = preferredTitle(info.description, raw.description)
 				raw.version = preferredTitle(info.version, raw.version)
 				inInfo = value == ""
-			case "channels", "operations", "paths":
+			case "channels", "operations", "paths", "properties":
 				if value == "" {
 					section = key
 				}
@@ -133,6 +158,8 @@ func parseYAMLDocument(path string, data []byte) specification {
 			raw.operations = appendUnique(raw.operations, key)
 		case "paths":
 			raw.paths = appendUnique(raw.paths, key)
+		case "properties":
+			raw.properties = appendUnique(raw.properties, key)
 		}
 	}
 
@@ -151,11 +178,16 @@ func normalizeSpecification(path string, raw rawSpecification) specification {
 		kind = kindOpenAPI
 		specVersion = raw.openAPI
 	}
+	if raw.jsonSchema != "" {
+		kind = kindJSONSchema
+		specVersion = schemaDialect(raw.jsonSchema)
+	}
 
 	return specification{
 		source:      path,
 		kind:        kind,
 		specVersion: specVersion,
+		id:          raw.id,
 		version:     raw.version,
 		title:       raw.title,
 		name:        raw.name,
@@ -164,6 +196,7 @@ func normalizeSpecification(path string, raw rawSpecification) specification {
 			channels:   sortedCopy(raw.channels),
 			operations: sortedCopy(raw.operations),
 			paths:      sortedCopy(raw.paths),
+			properties: sortedCopy(raw.properties),
 		},
 	}
 }
@@ -264,6 +297,15 @@ func flowInfo(value string) rawSpecification {
 		}
 	}
 	return info
+}
+
+func schemaDialect(uri string) string {
+	for _, dialect := range []string{"2020-12", "2019-09", "draft-07", "draft-06", "draft-04"} {
+		if strings.Contains(uri, dialect) {
+			return dialect
+		}
+	}
+	return uri
 }
 
 func preferredTitle(values ...string) string {

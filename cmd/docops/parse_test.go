@@ -99,3 +99,46 @@ func TestParseJSONDocument(t *testing.T) {
 		t.Errorf("paths = %q, want %q", spec.structure.paths, []string{"/hello"})
 	}
 }
+
+func TestParseJSONSchemaDocument(t *testing.T) {
+	data := []byte(`{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://example.com/hello-world.schema.json","title":"Hello World Schema","description":"A minimal JSON Schema example.","properties":{"message":{"type":"string"}}}`)
+	spec, err := parseJSONDocument("schema.json", data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.kind != kindJSONSchema {
+		t.Errorf("kind = %q, want %q", spec.kind, kindJSONSchema)
+	}
+	if spec.specVersion != "2020-12" {
+		t.Errorf("spec version = %q, want %q", spec.specVersion, "2020-12")
+	}
+	if spec.id != "https://example.com/hello-world.schema.json" {
+		t.Errorf("id = %q, want JSON Schema id", spec.id)
+	}
+	if spec.title != "Hello World Schema" || spec.description != "A minimal JSON Schema example." {
+		t.Errorf("spec = %+v, want JSON Schema metadata", spec)
+	}
+	if !slices.Equal(spec.structure.properties, []string{"message"}) {
+		t.Errorf("properties = %q, want %q", spec.structure.properties, []string{"message"})
+	}
+}
+
+func TestParseYAMLJSONSchemaDocument(t *testing.T) {
+	source := `$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://example.com/hello-world.schema.yaml
+title: YAML Schema
+properties:
+  message:
+    type: string
+`
+	spec := parseYAMLDocument("schema.yaml", []byte(source))
+	if spec.kind != kindJSONSchema || spec.specVersion != "2020-12" {
+		t.Errorf("spec = %+v, want JSON Schema 2020-12", spec)
+	}
+	if spec.title != "YAML Schema" {
+		t.Errorf("title = %q, want %q", spec.title, "YAML Schema")
+	}
+	if !slices.Equal(spec.structure.properties, []string{"message"}) {
+		t.Errorf("properties = %q, want %q", spec.structure.properties, []string{"message"})
+	}
+}
