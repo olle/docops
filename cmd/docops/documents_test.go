@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestCollectDocumentsFromNestedGlob(t *testing.T) {
+func TestCollectDocumentsFromNamedFiles(t *testing.T) {
 	root := t.TempDir()
 	nested := filepath.Join(root, "nested")
 	if err := os.Mkdir(nested, 0o755); err != nil {
@@ -22,10 +22,12 @@ func TestCollectDocumentsFromNestedGlob(t *testing.T) {
 	}
 
 	write(filepath.Join(nested, "asyncapi.yaml"), "asyncapi: 3.0.0\ninfo:\n  title: Events API\nchannels:\n  greetings:\n    address: greetings\noperations:\n  publishGreeting:\n    action: send\n")
-	write(filepath.Join(nested, "events.json"), `{"asyncapi":"3.0.0","info":{"name":"JSON Events"}}`)
-	write(filepath.Join(root, "openapi.yaml"), "openapi: 3.1.0\ninfo:\n  title: Not AsyncAPI\npaths:\n  /hello:\n    get: {}\n")
+	write(filepath.Join(nested, "asyncapi.json"), `{"asyncapi":"3.0.0","info":{"name":"JSON Events"}}`)
+	write(filepath.Join(nested, "asyncapi.yml"), "openapi: 3.1.0\ninfo:\n  title: Peek API\npaths:\n  /ping:\n    get: {}\n")
+	write(filepath.Join(root, "openapi.yaml"), "openapi: 3.1.0\ninfo:\n  title: HTTP API\npaths:\n  /hello:\n    get: {}\n")
+	write(filepath.Join(root, "readme.yaml"), "openapi: 3.1.0\ninfo:\n  title: Ignored API\n")
 
-	documents, err := collectDocuments(root, globDocumentFinder{}, fileDocumentParser{})
+	documents, err := collectDocuments(root, documentNameFinder{}, fileDocumentParser{})
 	if err != nil {
 		t.Fatalf("collectDocuments: %v", err)
 	}
@@ -36,18 +38,25 @@ func TestCollectDocumentsFromNestedGlob(t *testing.T) {
 	}
 
 	openAPIs := documents.ByKind(kindOpenAPI)
-	if len(openAPIs) != 1 {
-		t.Fatalf("OpenAPI documents = %d, want 1", len(openAPIs))
+	if len(openAPIs) != 2 {
+		t.Fatalf("OpenAPI documents = %d, want 2", len(openAPIs))
 	}
-	if openAPIs[0].title != "Not AsyncAPI" {
-		t.Errorf("OpenAPI title = %q, want %q", openAPIs[0].title, "Not AsyncAPI")
+	byTitle := make(map[string]specification, len(openAPIs))
+	for _, doc := range openAPIs {
+		byTitle[doc.title] = doc
 	}
-	if !slices.Equal(openAPIs[0].structure.paths, []string{"/hello"}) {
-		t.Errorf("OpenAPI paths = %q, want %q", openAPIs[0].structure.paths, []string{"/hello"})
+	if doc, ok := byTitle["HTTP API"]; !ok || !slices.Equal(doc.structure.paths, []string{"/hello"}) {
+		t.Errorf("HTTP API paths = %q, want %q", doc.structure.paths, []string{"/hello"})
+	}
+	if doc, ok := byTitle["Peek API"]; !ok || !slices.Equal(doc.structure.paths, []string{"/ping"}) {
+		t.Errorf("Peek API paths = %q, want %q", doc.structure.paths, []string{"/ping"})
+	}
+	if _, ok := byTitle["Ignored API"]; ok {
+		t.Error("non-conventional filename was included")
 	}
 
 	counts := documents.Counts()
-	if counts[kindAsyncAPI] != 2 || counts[kindOpenAPI] != 1 {
-		t.Errorf("counts = %v, want asyncapi=2 openapi=1", counts)
+	if counts[kindAsyncAPI] != 2 || counts[kindOpenAPI] != 2 {
+		t.Errorf("counts = %v, want asyncapi=2 openapi=2", counts)
 	}
 }

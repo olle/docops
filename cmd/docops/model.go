@@ -50,7 +50,7 @@ func (c catalog) Titles(kind specificationKind) []string {
 			titles = append(titles, doc.title)
 		}
 	}
-	return titles
+	return sortedCopy(titles)
 }
 
 func (c catalog) Counts() map[specificationKind]int {

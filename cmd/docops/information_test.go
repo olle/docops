@@ -17,7 +17,7 @@ func TestDocumentInformationBuildsMessage(t *testing.T) {
 	source := documentInformation{
 		name:   "Ada",
 		root:   root,
-		finder: globDocumentFinder{},
+		finder: documentNameFinder{},
 		parser: fileDocumentParser{},
 	}
 	msg, err := source.Message()

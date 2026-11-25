@@ -6,11 +6,18 @@ import (
 	"strings"
 )
 
-var documentGlobs = []string{"*.yaml", "*.yml", "*.json"}
+var documentNames = map[string]bool{
+	"asyncapi.yaml": true,
+	"asyncapi.yml":  true,
+	"asyncapi.json": true,
+	"openapi.yaml":  true,
+	"openapi.yml":   true,
+	"openapi.json":  true,
+}
 
-type globDocumentFinder struct{}
+type documentNameFinder struct{}
 
-func (globDocumentFinder) Find(root string) ([]string, error) {
+func (documentNameFinder) Find(root string) ([]string, error) {
 	var paths []string
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -22,15 +29,8 @@ func (globDocumentFinder) Find(root string) ([]string, error) {
 			}
 			return nil
 		}
-		for _, pattern := range documentGlobs {
-			matched, err := filepath.Match(pattern, entry.Name())
-			if err != nil {
-				return err
-			}
-			if matched {
-				paths = append(paths, path)
-				return nil
-			}
+		if documentNames[entry.Name()] {
+			paths = append(paths, path)
 		}
 		return nil
 	})

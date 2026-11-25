@@ -59,7 +59,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := commandFor(cfg).Run(); err != nil {
+	cmd, err := commandFor(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := cmd.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
