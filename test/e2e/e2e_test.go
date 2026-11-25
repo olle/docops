@@ -42,13 +42,13 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestHelloNameResolvesName(t *testing.T) {
-	output, err := exec.Command(docopsBinary, "-name", "Ada").CombinedOutput()
+func TestHelloUsesDefaultName(t *testing.T) {
+	output, err := exec.Command(docopsBinary).CombinedOutput()
 	if err != nil {
 		t.Fatalf("running docops: %v\n%s", err, output)
 	}
 
-	if got, want := strings.TrimSpace(string(output)), "Hello Ada!"; got != want {
+	if got, want := strings.TrimSpace(string(output)), "Hello World!"; got != want {
 		t.Errorf("greeting = %q, want %q", got, want)
 	}
 }
@@ -73,9 +73,44 @@ func TestTUIModeRendersMessage(t *testing.T) {
 	}
 }
 
+func TestHTMLFlagOutput(t *testing.T) {
+	cmd := exec.Command(docopsBinary, "-html")
+	cmd.Dir = repoRoot
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("running docops -html: %v\n%s", err, output)
+	}
+
+	got := string(output)
+	for _, want := range []string{"<!doctype html>", "<h1>Hello World!</h1>", "<li>Hello World Events</li>", "<style>"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("static HTML = %q, want %q", got, want)
+		}
+	}
+}
+
+func TestMDFlagOutput(t *testing.T) {
+	cmd := exec.Command(docopsBinary, "-md")
+	cmd.Dir = repoRoot
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("running docops -md: %v\n%s", err, output)
+	}
+
+	got := string(output)
+	for _, want := range []string{"# Hello World!", "## AsyncAPI documents", "- Hello World Events"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("static Markdown = %q, want %q", got, want)
+		}
+	}
+	if strings.Contains(got, "<html") {
+		t.Errorf("static Markdown = %q, want no HTML", got)
+	}
+}
+
 func TestServerModeServesHelloWorld(t *testing.T) {
 	addr := freeAddr(t)
-	cmd := exec.Command(docopsBinary, "--server", "--addr", addr)
+	cmd := exec.Command(docopsBinary, "--server="+addr)
 	cmd.Dir = repoRoot
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard

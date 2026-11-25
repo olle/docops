@@ -27,6 +27,16 @@ func (c greetCommand) Run() error {
 	return c.presenter.Render(c.out, messageFor(c.info))
 }
 
+type staticCommand struct {
+	info      informationSource
+	presenter presenter
+	out       io.Writer
+}
+
+func (c staticCommand) Run() error {
+	return c.presenter.Render(c.out, messageFor(c.info))
+}
+
 type serveCommand struct {
 	addr      string
 	info      informationSource

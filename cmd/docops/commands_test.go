@@ -65,6 +65,21 @@ func TestGreetCommandUsesOnlyInformationAndPresenter(t *testing.T) {
 	}
 }
 
+func TestStaticCommandWritesAndUsesPresenter(t *testing.T) {
+	var out bytes.Buffer
+	info := fakeInformation{msg: newMessage(defaultName, nil)}
+	presenter := &recordingPresenter{}
+	if err := (staticCommand{info: info, presenter: presenter, out: &out}).Run(); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := out.String(), "rendered:Hello World!"; got != want {
+		t.Errorf("output = %q, want %q", got, want)
+	}
+	if presenter.msg.greeting != info.msg.greeting {
+		t.Errorf("presented %q, want %q", presenter.msg.greeting, info.msg.greeting)
+	}
+}
+
 func TestTUICommandUsesOnlyInformationAndPresenter(t *testing.T) {
 	info := fakeInformation{msg: newMessage("Ada", []string{"Events API"})}
 	screen := &recordingScreen{}
