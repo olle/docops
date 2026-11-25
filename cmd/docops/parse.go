@@ -23,9 +23,11 @@ func (fileDocumentParser) Parse(path string) (specification, error) {
 
 type rawSpecification struct {
 	asyncAPI    string
+	avroType    string
 	openAPI     string
 	jsonSchema  string
 	id          string
+	namespace   string
 	name        string
 	title       string
 	description string
@@ -34,6 +36,7 @@ type rawSpecification struct {
 	operations  []string
 	paths       []string
 	properties  []string
+	fields      []string
 }
 
 func parseJSONDocument(path string, data []byte) (specification, error) {
@@ -44,17 +47,20 @@ func parseJSONDocument(path string, data []byte) (specification, error) {
 
 	parsed := rawSpecification{
 		asyncAPI:    stringValue(raw["asyncapi"]),
+		avroType:    stringValue(raw["type"]),
 		openAPI:     stringValue(raw["openapi"]),
 		jsonSchema:  stringValue(raw["$schema"]),
 		id:          preferredTitle(stringValue(raw["$id"]), stringValue(raw["id"])),
+		namespace:   stringValue(raw["namespace"]),
 		name:        stringValue(raw["name"]),
 		title:       stringValue(raw["title"]),
-		description: stringValue(raw["description"]),
+		description: preferredTitle(stringValue(raw["description"]), stringValue(raw["doc"])),
 		version:     stringValue(raw["version"]),
 		channels:    objectKeys(raw["channels"]),
 		operations:  objectKeys(raw["operations"]),
 		paths:       objectKeys(raw["paths"]),
 		properties:  objectKeys(raw["properties"]),
+		fields:      avroFieldNames(raw["fields"]),
 	}
 	if info, ok := raw["info"].(map[string]any); ok {
 		parsed.title = preferredTitle(stringValue(info["title"]), stringValue(info["name"]))
@@ -89,6 +95,16 @@ func parseYAMLDocument(path string, data []byte) specification {
 				raw.asyncAPI = scalar(value)
 			case "openapi":
 				raw.openAPI = scalar(value)
+			case "type":
+				if raw.avroType == "" {
+					raw.avroType = scalar(value)
+				}
+			case "namespace":
+				raw.namespace = scalar(value)
+			case "doc":
+				if raw.description == "" {
+					raw.description = scalar(value)
+				}
 			case "$schema":
 				raw.jsonSchema = scalar(value)
 			case "$id", "id":
@@ -113,7 +129,7 @@ func parseYAMLDocument(path string, data []byte) specification {
 				raw.description = preferredTitle(info.description, raw.description)
 				raw.version = preferredTitle(info.version, raw.version)
 				inInfo = value == ""
-			case "channels", "operations", "paths", "properties":
+			case "channels", "operations", "paths", "properties", "fields":
 				if value == "" {
 					section = key
 				}
@@ -160,6 +176,8 @@ func parseYAMLDocument(path string, data []byte) specification {
 			raw.paths = appendUnique(raw.paths, key)
 		case "properties":
 			raw.properties = appendUnique(raw.properties, key)
+		case "fields":
+			raw.fields = appendUnique(raw.fields, key)
 		}
 	}
 
@@ -182,12 +200,19 @@ func normalizeSpecification(path string, raw rawSpecification) specification {
 		kind = kindJSONSchema
 		specVersion = schemaDialect(raw.jsonSchema)
 	}
+	if isAvroType(raw.avroType) {
+		kind = kindAvro
+	}
 
+	id := raw.id
+	if kind == kindAvro {
+		id = preferredTitle(id, qualifiedAvroName(raw.namespace, raw.name))
+	}
 	return specification{
 		source:      path,
 		kind:        kind,
 		specVersion: specVersion,
-		id:          raw.id,
+		id:          id,
 		version:     raw.version,
 		title:       raw.title,
 		name:        raw.name,
@@ -197,6 +222,7 @@ func normalizeSpecification(path string, raw rawSpecification) specification {
 			operations: sortedCopy(raw.operations),
 			paths:      sortedCopy(raw.paths),
 			properties: sortedCopy(raw.properties),
+			fields:     sortedCopy(raw.fields),
 		},
 	}
 }
@@ -245,6 +271,7 @@ func sortedCopy(values []string) []string {
 }
 
 func splitField(s string) (string, string) {
+	s = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(s), "- "))
 	key, value, found := strings.Cut(s, ":")
 	if !found {
 		return s, ""
@@ -297,6 +324,38 @@ func flowInfo(value string) rawSpecification {
 		}
 	}
 	return info
+}
+
+func isAvroType(value string) bool {
+	switch value {
+	case "record", "error", "enum", "fixed":
+		return true
+	default:
+		return false
+	}
+}
+
+func avroFieldNames(value any) []string {
+	items, ok := value.([]any)
+	if !ok {
+		return nil
+	}
+	var names []string
+	for _, item := range items {
+		field, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		names = appendUnique(names, stringValue(field["name"]))
+	}
+	return names
+}
+
+func qualifiedAvroName(namespace, name string) string {
+	if name == "" || namespace == "" || strings.HasPrefix(name, namespace+".") {
+		return name
+	}
+	return namespace + "." + name
 }
 
 func schemaDialect(uri string) string {

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var documentGlobs = []string{"*.yaml", "*.yml", "*.json"}
+var documentGlobs = []string{"*.yaml", "*.yml", "*.json", "*.avsc"}
 
 type documentGlobFinder struct{}
 

@@ -36,6 +36,7 @@ func TestCollectDocumentsFromYAMLAndJSONCandidates(t *testing.T) {
 	write(filepath.Join(nested, "peek.yml"), "openapi: 3.1.0\ninfo:\n  title: Peek API\npaths:\n  /ping:\n    get: {}\n")
 	write(filepath.Join(root, "api.yaml"), "openapi: 3.1.0\ninfo:\n  title: HTTP API\npaths:\n  /hello:\n    get: {}\n")
 	write(filepath.Join(root, "jsonschema.json"), `{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"Schema API"}`)
+	write(filepath.Join(root, "greeting.avsc"), `{"type":"record","name":"Greeting","fields":[{"name":"message","type":"string"}]}`)
 	write(filepath.Join(root, "readme.yaml"), "notes: not a specification\n")
 
 	documents, err := collectDocuments(root, documentGlobFinder{}, fileDocumentSniffer{}, fileDocumentParser{})
@@ -64,8 +65,8 @@ func TestCollectDocumentsFromYAMLAndJSONCandidates(t *testing.T) {
 	}
 
 	counts := documents.Counts()
-	if counts[kindAsyncAPI] != 2 || counts[kindOpenAPI] != 2 || counts[kindJSONSchema] != 1 {
-		t.Errorf("counts = %v, want asyncapi=2 openapi=2 jsonschema=1", counts)
+	if counts[kindAsyncAPI] != 2 || counts[kindOpenAPI] != 2 || counts[kindJSONSchema] != 1 || counts[kindAvro] != 1 {
+		t.Errorf("counts = %v, want asyncapi=2 openapi=2 jsonschema=1 avro=1", counts)
 	}
 	for _, doc := range documents.All() {
 		if strings.Contains(doc.source, "readme.yaml") {
@@ -78,12 +79,14 @@ func TestCatalogSummariesUseTitleOrNameAndKind(t *testing.T) {
 	documents := catalog{documents: []specification{
 		{kind: kindOpenAPI, title: "HTTP API"},
 		{kind: kindAsyncAPI, name: "Events"},
+		{kind: kindAvro, name: "Greeting"},
 		{kind: kindJSONSchema, name: "Schema"},
 		{kind: kindOpenAPI},
 		{kind: kindUnknown, title: "Ignored"},
 	}}
 	want := []specificationSummary{
 		{kind: kindAsyncAPI, title: "Events"},
+		{kind: kindAvro, title: "Greeting"},
 		{kind: kindJSONSchema, title: "Schema"},
 		{kind: kindOpenAPI, title: "HTTP API"},
 	}
@@ -123,6 +126,7 @@ func TestCatalogStringCascadesFullModel(t *testing.T) {
         operations: ["publishGreeting"]
         paths: []
         properties: []
+        fields: []
 `
 	if got := documents.String(); got != want {
 		t.Errorf("String() = %q, want %q", got, want)

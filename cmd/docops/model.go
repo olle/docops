@@ -12,6 +12,7 @@ type specificationKind string
 const (
 	kindUnknown    specificationKind = ""
 	kindAsyncAPI   specificationKind = "asyncapi"
+	kindAvro       specificationKind = "avro"
 	kindOpenAPI    specificationKind = "openapi"
 	kindJSONSchema specificationKind = "jsonschema"
 )
@@ -20,6 +21,8 @@ func (k specificationKind) Label() string {
 	switch k {
 	case kindAsyncAPI:
 		return "AsyncAPI"
+	case kindAvro:
+		return "Avro"
 	case kindOpenAPI:
 		return "OpenAPI"
 	case kindJSONSchema:
@@ -38,6 +41,7 @@ type specificationStructure struct {
 	operations []string
 	paths      []string
 	properties []string
+	fields     []string
 }
 
 type specification struct {
@@ -118,6 +122,7 @@ func (s specificationStructure) String() string {
 	fmt.Fprintf(&b, "  operations: %s\n", debugStringList(s.operations))
 	fmt.Fprintf(&b, "  paths: %s\n", debugStringList(s.paths))
 	fmt.Fprintf(&b, "  properties: %s\n", debugStringList(s.properties))
+	fmt.Fprintf(&b, "  fields: %s\n", debugStringList(s.fields))
 	return b.String()
 }
 

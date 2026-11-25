@@ -38,6 +38,9 @@ func TestDetectSpecificationKindJSON(t *testing.T) {
 	if got := detectSpecificationKind(`{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"Example"}`); got != kindJSONSchema {
 		t.Errorf("kind = %q, want %q", got, kindJSONSchema)
 	}
+	if got := detectSpecificationKind(`{"type":"record","name":"Greeting","fields":[]}`); got != kindAvro {
+		t.Errorf("kind = %q, want %q", got, kindAvro)
+	}
 }
 
 func TestFileDocumentSnifferReadsBoundedPrefix(t *testing.T) {

@@ -48,6 +48,9 @@ func detectSpecificationKind(prefix string) specificationKind {
 	if schema >= 0 && strings.Contains(prefix[schema:], "json-schema.org") {
 		return kindJSONSchema
 	}
+	if isAvroPrefix(prefix) {
+		return kindAvro
+	}
 
 	async := strings.Index(prefix, `"asyncapi"`)
 	open := strings.Index(prefix, `"openapi"`)
@@ -59,4 +62,16 @@ func detectSpecificationKind(prefix string) specificationKind {
 	default:
 		return kindUnknown
 	}
+}
+
+func isAvroPrefix(prefix string) bool {
+	if !strings.Contains(prefix, `"type"`) || !strings.Contains(prefix, `"name"`) {
+		return false
+	}
+	for _, avroType := range []string{`"record"`, `"error"`, `"enum"`, `"fixed"`} {
+		if strings.Contains(prefix, avroType) {
+			return true
+		}
+	}
+	return false
 }

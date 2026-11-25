@@ -142,3 +142,23 @@ properties:
 		t.Errorf("properties = %q, want %q", spec.structure.properties, []string{"message"})
 	}
 }
+
+func TestParseAvroDocument(t *testing.T) {
+	data := []byte(`{"type":"record","name":"Greeting","namespace":"dev.docops.hello","doc":"A greeting.","fields":[{"name":"message","type":"string"},{"name":"id","type":"long"}]}`)
+	spec, err := parseJSONDocument("greeting.avsc", data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.kind != kindAvro {
+		t.Errorf("kind = %q, want %q", spec.kind, kindAvro)
+	}
+	if spec.id != "dev.docops.hello.Greeting" {
+		t.Errorf("id = %q, want qualified Avro name", spec.id)
+	}
+	if spec.title != "Greeting" || spec.description != "A greeting." {
+		t.Errorf("spec = %+v, want Avro metadata", spec)
+	}
+	if !slices.Equal(spec.structure.fields, []string{"id", "message"}) {
+		t.Errorf("fields = %q, want %q", spec.structure.fields, []string{"id", "message"})
+	}
+}

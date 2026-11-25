@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "Greeting",
+  "namespace": "dev.docops.hello",
+  "doc": "A greeting emitted by the Hello World example.",
+  "fields": [
+    { "name": "message", "type": "string" }
+  ]
+}
