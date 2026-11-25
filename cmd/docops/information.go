@@ -18,7 +18,7 @@ func (i documentInformation) Catalog() (catalog, error) {
 
 func (i documentInformation) Message() (message, error) {
 	documents, err := i.Catalog()
-	return newMessage(i.name, documents.Titles(kindAsyncAPI)), err
+	return newMessage(i.name, documents.Summaries()), err
 }
 
 type fixedInformation struct {

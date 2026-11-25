@@ -63,3 +63,19 @@ func TestCollectDocumentsFromYAMLAndJSONCandidates(t *testing.T) {
 		}
 	}
 }
+
+func TestCatalogSummariesUseTitleOrNameAndKind(t *testing.T) {
+	documents := catalog{documents: []specification{
+		{kind: kindOpenAPI, title: "HTTP API"},
+		{kind: kindAsyncAPI, name: "Events"},
+		{kind: kindOpenAPI},
+		{kind: kindUnknown, title: "Ignored"},
+	}}
+	want := []specificationSummary{
+		{kind: kindAsyncAPI, title: "Events"},
+		{kind: kindOpenAPI, title: "HTTP API"},
+	}
+	if got := documents.Summaries(); !slices.Equal(got, want) {
+		t.Errorf("summaries = %+v, want %+v", got, want)
+	}
+}

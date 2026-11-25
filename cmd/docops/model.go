@@ -1,5 +1,7 @@
 package main
 
+import "sort"
+
 type specificationKind string
 
 const (
@@ -7,6 +9,17 @@ const (
 	kindAsyncAPI specificationKind = "asyncapi"
 	kindOpenAPI  specificationKind = "openapi"
 )
+
+func (k specificationKind) Label() string {
+	switch k {
+	case kindAsyncAPI:
+		return "AsyncAPI"
+	case kindOpenAPI:
+		return "OpenAPI"
+	default:
+		return "Unknown"
+	}
+}
 
 type specificationStructure struct {
 	channels   []string
@@ -25,8 +38,31 @@ type specification struct {
 	structure   specificationStructure
 }
 
+type specificationSummary struct {
+	kind  specificationKind
+	title string
+}
+
 type catalog struct {
 	documents []specification
+}
+
+func (c catalog) Summaries() []specificationSummary {
+	summaries := make([]specificationSummary, 0, len(c.documents))
+	for _, doc := range c.documents {
+		title := preferredTitle(doc.title, doc.name)
+		if doc.kind == kindUnknown || title == "" {
+			continue
+		}
+		summaries = append(summaries, specificationSummary{kind: doc.kind, title: title})
+	}
+	sort.Slice(summaries, func(i, j int) bool {
+		if summaries[i].kind != summaries[j].kind {
+			return summaries[i].kind.Label() < summaries[j].kind.Label()
+		}
+		return summaries[i].title < summaries[j].title
+	})
+	return summaries
 }
 
 func (c catalog) All() []specification {

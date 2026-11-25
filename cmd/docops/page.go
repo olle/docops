@@ -14,11 +14,15 @@ func (htmlWriter) ContentType() string {
 
 func (htmlWriter) Render(w io.Writer, msg message) error {
 	body := []htmlNode{htmlH1(msg.greeting)}
-	if len(msg.titles) > 0 {
-		items := make([]htmlNode, 0, len(msg.titles))
-		for _, title := range msg.titles {
-			items = append(items, htmlElement{tag: "li", children: []htmlNode{htmlText(title)}})
+	if len(msg.specifications) > 0 {
+		items := make([]htmlNode, 0, len(msg.specifications))
+		for _, spec := range msg.specifications {
+			items = append(items, htmlElement{tag: "li", children: []htmlNode{
+				htmlElement{tag: "strong", children: []htmlNode{htmlText(spec.kind.Label())}},
+				htmlText(": " + spec.title),
+			}})
 		}
+		body = append(body, htmlElement{tag: "h2", children: []htmlNode{htmlText("Specifications")}})
 		body = append(body, htmlElement{tag: "ul", children: items})
 	}
 

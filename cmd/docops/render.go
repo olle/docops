@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 )
 
@@ -10,15 +11,15 @@ func (plainTextWriter) Render(w io.Writer, msg message) error {
 	if _, err := io.WriteString(w, msg.greeting); err != nil {
 		return err
 	}
-	if len(msg.titles) == 0 {
+	if len(msg.specifications) == 0 {
 		_, err := io.WriteString(w, "\n")
 		return err
 	}
-	if _, err := io.WriteString(w, "\n\nAsyncAPI documents:\n"); err != nil {
+	if _, err := io.WriteString(w, "\n\nSpecifications:\n"); err != nil {
 		return err
 	}
-	for _, title := range msg.titles {
-		if _, err := io.WriteString(w, "- "+title+"\n"); err != nil {
+	for _, spec := range msg.specifications {
+		if _, err := fmt.Fprintf(w, "- %s: %s\n", spec.kind.Label(), spec.title); err != nil {
 			return err
 		}
 	}

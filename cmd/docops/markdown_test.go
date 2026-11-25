@@ -7,24 +7,27 @@ import (
 
 func TestMarkdownWriterRender(t *testing.T) {
 	var buf bytes.Buffer
-	msg := newMessage("Ada & Bob", []string{"<Events> *beta*", "Plain"})
+	msg := newMessage("Ada & Bob", []specificationSummary{
+		{kind: kindAsyncAPI, title: "<Events> *beta*"},
+		{kind: kindOpenAPI, title: "Plain"},
+	})
 	if err := (markdownWriter{}).Render(&buf, msg); err != nil {
 		t.Fatal(err)
 	}
 
 	want := `# Hello Ada & Bob!
 
-## AsyncAPI documents
+## Specifications
 
-- \<Events\> \*beta\*
-- Plain
+- AsyncAPI: \<Events\> \*beta\*
+- OpenAPI: Plain
 `
 	if got := buf.String(); got != want {
 		t.Errorf("Markdown = %q, want %q", got, want)
 	}
 }
 
-func TestMarkdownWriterRenderWithoutTitles(t *testing.T) {
+func TestMarkdownWriterRenderWithoutSpecifications(t *testing.T) {
 	var buf bytes.Buffer
 	if err := (markdownWriter{}).Render(&buf, newMessage("World", nil)); err != nil {
 		t.Fatal(err)

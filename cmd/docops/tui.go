@@ -57,18 +57,19 @@ func renderTUI(w io.Writer, msg message, styled bool) error {
 		return err
 	}
 
-	if len(msg.titles) > 0 {
-		if _, err := io.WriteString(w, "AsyncAPI documents:\n"); err != nil {
+	if len(msg.specifications) > 0 {
+		if _, err := io.WriteString(w, "Specifications:\n"); err != nil {
 			return err
 		}
-		for _, title := range msg.titles {
+		for _, spec := range msg.specifications {
+			entry := spec.kind.Label() + ": " + spec.title
 			if styled {
-				if _, err := fmt.Fprintf(w, "  \x1b[36m*\x1b[0m %s\n", title); err != nil {
+				if _, err := fmt.Fprintf(w, "  \x1b[36m*\x1b[0m %s\n", entry); err != nil {
 					return err
 				}
 				continue
 			}
-			if _, err := fmt.Fprintf(w, "  * %s\n", title); err != nil {
+			if _, err := fmt.Fprintf(w, "  * %s\n", entry); err != nil {
 				return err
 			}
 		}

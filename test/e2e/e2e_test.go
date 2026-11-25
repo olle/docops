@@ -63,7 +63,13 @@ func TestTUIModeRendersMessage(t *testing.T) {
 	}
 
 	got := string(output)
-	for _, want := range []string{"Hello World!", "AsyncAPI documents:", "Hello World Events", "q: quit"} {
+	for _, want := range []string{
+		"Hello World!",
+		"Specifications:",
+		"AsyncAPI: Hello World Events",
+		"OpenAPI: Hello World API",
+		"q: quit",
+	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("TUI output = %q, want %q", got, want)
 		}
@@ -82,7 +88,14 @@ func TestHTMLFlagOutput(t *testing.T) {
 	}
 
 	got := string(output)
-	for _, want := range []string{"<!doctype html>", "<h1>Hello World!</h1>", "<li>Hello World Events</li>", "<style>"} {
+	for _, want := range []string{
+		"<!doctype html>",
+		"<h1>Hello World!</h1>",
+		"<h2>Specifications</h2>",
+		"<li><strong>AsyncAPI</strong>: Hello World Events</li>",
+		"<li><strong>OpenAPI</strong>: Hello World API</li>",
+		"<style>",
+	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("static HTML = %q, want %q", got, want)
 		}
@@ -98,7 +111,12 @@ func TestMDFlagOutput(t *testing.T) {
 	}
 
 	got := string(output)
-	for _, want := range []string{"# Hello World!", "## AsyncAPI documents", "- Hello World Events"} {
+	for _, want := range []string{
+		"# Hello World!",
+		"## Specifications",
+		"- AsyncAPI: Hello World Events",
+		"- OpenAPI: Hello World API",
+	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("static Markdown = %q, want %q", got, want)
 		}
@@ -150,8 +168,10 @@ func TestServerModeServesHelloWorld(t *testing.T) {
 	got := string(body)
 	if !strings.Contains(got, "<!doctype html>") ||
 		!strings.Contains(got, "<h1>Hello World!</h1>") ||
-		!strings.Contains(got, "<li>Hello World Events</li>") {
-		t.Errorf("response body = %q, want semantic HTML with greeting and AsyncAPI title", got)
+		!strings.Contains(got, "<h2>Specifications</h2>") ||
+		!strings.Contains(got, "<li><strong>AsyncAPI</strong>: Hello World Events</li>") ||
+		!strings.Contains(got, "<li><strong>OpenAPI</strong>: Hello World API</li>") {
+		t.Errorf("response body = %q, want semantic HTML with greeting and specifications", got)
 	}
 	if !strings.Contains(got, "<style>") || !strings.Contains(got, ":not(pre)>code") {
 		t.Errorf("response body = %q, want inlined CSS", got)

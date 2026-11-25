@@ -81,12 +81,14 @@ func TestStaticCommandWritesAndUsesPresenter(t *testing.T) {
 }
 
 func TestTUICommandUsesOnlyInformationAndPresenter(t *testing.T) {
-	info := fakeInformation{msg: newMessage("Ada", []string{"Events API"})}
+	info := fakeInformation{msg: newMessage("Ada", []specificationSummary{{kind: kindOpenAPI, title: "Events API"}})}
 	screen := &recordingScreen{}
 	if err := (tuiCommand{info: info, presenter: screen}).Run(); err != nil {
 		t.Fatal(err)
 	}
-	if screen.msg.greeting != info.msg.greeting || len(screen.msg.titles) != 1 {
+	if screen.msg.greeting != info.msg.greeting ||
+		len(screen.msg.specifications) != 1 ||
+		screen.msg.specifications[0] != info.msg.specifications[0] {
 		t.Errorf("presented %+v, want %+v", screen.msg, info.msg)
 	}
 }

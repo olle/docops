@@ -18,12 +18,13 @@ func (t *fakeTerminal) Raw() (func(), bool) {
 
 func TestRenderTUIPlain(t *testing.T) {
 	var buf bytes.Buffer
-	if err := renderTUI(&buf, newMessage("Ada", []string{"Events API"}), false); err != nil {
+	msg := newMessage("Ada", []specificationSummary{{kind: kindAsyncAPI, title: "Events API"}})
+	if err := renderTUI(&buf, msg, false); err != nil {
 		t.Fatal(err)
 	}
 
 	got := buf.String()
-	for _, want := range []string{"Hello Ada!", "AsyncAPI documents:", "  * Events API", "q: quit"} {
+	for _, want := range []string{"Hello Ada!", "Specifications:", "  * AsyncAPI: Events API", "q: quit"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("TUI output = %q, want %q", got, want)
 		}

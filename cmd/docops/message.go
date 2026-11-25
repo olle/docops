@@ -1,13 +1,13 @@
 package main
 
 type message struct {
-	greeting string
-	titles   []string
+	greeting       string
+	specifications []specificationSummary
 }
 
-func newMessage(name string, titles []string) message {
+func newMessage(name string, specifications []specificationSummary) message {
 	return message{
-		greeting: "Hello " + name + "!",
-		titles:   titles,
+		greeting:       "Hello " + name + "!",
+		specifications: specifications,
 	}
 }
