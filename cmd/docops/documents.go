@@ -5,26 +5,21 @@ import (
 	"fmt"
 )
 
-type document struct {
-	asyncAPI string
-	title    string
-}
-
 type documentFinder interface {
 	Find(root string) ([]string, error)
 }
 
 type documentParser interface {
-	Parse(path string) (document, error)
+	Parse(path string) (specification, error)
 }
 
-func collectTitles(root string, finder documentFinder, parser documentParser) ([]string, error) {
+func collectDocuments(root string, finder documentFinder, parser documentParser) (catalog, error) {
 	paths, err := finder.Find(root)
 	if err != nil {
-		return nil, err
+		return catalog{}, err
 	}
 
-	var titles []string
+	var documents []specification
 	var errs []error
 	for _, path := range paths {
 		doc, err := parser.Parse(path)
@@ -32,9 +27,10 @@ func collectTitles(root string, finder documentFinder, parser documentParser) ([
 			errs = append(errs, fmt.Errorf("%s: %w", path, err))
 			continue
 		}
-		if doc.asyncAPI != "" && doc.title != "" {
-			titles = append(titles, doc.title)
+		if doc.kind == kindUnknown {
+			continue
 		}
+		documents = append(documents, doc)
 	}
-	return titles, errors.Join(errs...)
+	return catalog{documents: documents}, errors.Join(errs...)
 }

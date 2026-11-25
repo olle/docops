@@ -3,81 +3,212 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
 
 type fileDocumentParser struct{}
 
-func (fileDocumentParser) Parse(path string) (document, error) {
+func (fileDocumentParser) Parse(path string) (specification, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return document{}, err
+		return specification{}, err
 	}
 	if strings.HasPrefix(strings.TrimSpace(string(data)), "{") {
-		return parseJSONDocument(data)
+		return parseJSONDocument(path, data)
 	}
-	return parseYAMLDocument(data), nil
+	return parseYAMLDocument(path, data), nil
 }
 
-type jsonDocument struct {
-	AsyncAPI string `json:"asyncapi"`
-	Name     string `json:"name"`
-	Info     struct {
-		Title string `json:"title"`
-		Name  string `json:"name"`
-	} `json:"info"`
+type rawSpecification struct {
+	asyncAPI    string
+	openAPI     string
+	name        string
+	title       string
+	description string
+	version     string
+	channels    []string
+	operations  []string
+	paths       []string
 }
 
-func parseJSONDocument(data []byte) (document, error) {
-	var raw jsonDocument
+func parseJSONDocument(path string, data []byte) (specification, error) {
+	var raw map[string]any
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return document{}, err
+		return specification{}, err
 	}
-	return document{
-		asyncAPI: raw.AsyncAPI,
-		title:    preferredTitle(raw.Info.Title, raw.Info.Name, raw.Name),
-	}, nil
+
+	parsed := rawSpecification{
+		asyncAPI:   stringValue(raw["asyncapi"]),
+		openAPI:    stringValue(raw["openapi"]),
+		name:       stringValue(raw["name"]),
+		channels:   objectKeys(raw["channels"]),
+		operations: objectKeys(raw["operations"]),
+		paths:      objectKeys(raw["paths"]),
+	}
+	if info, ok := raw["info"].(map[string]any); ok {
+		parsed.title = preferredTitle(stringValue(info["title"]), stringValue(info["name"]))
+		parsed.description = stringValue(info["description"])
+		parsed.version = stringValue(info["version"])
+	}
+	parsed.title = preferredTitle(parsed.title, parsed.name)
+	return normalizeSpecification(path, parsed), nil
 }
 
-func parseYAMLDocument(data []byte) document {
-	var doc document
+func parseYAMLDocument(path string, data []byte) specification {
+	raw := rawSpecification{}
 	inInfo := false
+	section := ""
+	structureIndent := 0
+
 	for _, rawLine := range strings.Split(string(data), "\n") {
 		line := strings.TrimSuffix(rawLine, "\r")
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue
 		}
+
 		indent := len(line) - len(strings.TrimLeft(line, " "))
 		if indent == 0 {
 			inInfo = false
+			section = ""
+			structureIndent = 0
 			key, value := splitField(trimmed)
 			switch key {
 			case "asyncapi":
-				doc.asyncAPI = scalar(value)
+				raw.asyncAPI = scalar(value)
+			case "openapi":
+				raw.openAPI = scalar(value)
+			case "name":
+				raw.name = scalar(value)
 			case "info":
-				title, name := flowTitle(value)
-				doc.title = preferredTitle(title, name)
+				info := flowInfo(value)
+				raw.title = preferredTitle(info.title, info.name, raw.title)
+				raw.description = preferredTitle(info.description, raw.description)
+				raw.version = preferredTitle(info.version, raw.version)
 				inInfo = value == ""
+			case "channels", "operations", "paths":
+				if value == "" {
+					section = key
+				}
 			}
 			continue
 		}
+
+		key, value := splitField(trimmed)
 		if inInfo {
-			key, value := splitField(trimmed)
 			switch key {
 			case "title":
-				if doc.title == "" {
-					doc.title = scalar(value)
+				if raw.title == "" {
+					raw.title = scalar(value)
 				}
 			case "name":
-				if doc.title == "" {
-					doc.title = scalar(value)
+				if raw.title == "" {
+					raw.title = scalar(value)
+				}
+			case "description":
+				if raw.description == "" {
+					raw.description = scalar(value)
+				}
+			case "version":
+				if raw.version == "" {
+					raw.version = scalar(value)
 				}
 			}
 		}
+		if section == "" || indent == 0 {
+			continue
+		}
+		if structureIndent == 0 {
+			structureIndent = indent
+		}
+		if indent != structureIndent {
+			continue
+		}
+		switch section {
+		case "channels":
+			raw.channels = appendUnique(raw.channels, key)
+		case "operations":
+			raw.operations = appendUnique(raw.operations, key)
+		case "paths":
+			raw.paths = appendUnique(raw.paths, key)
+		}
 	}
-	return doc
+
+	raw.title = preferredTitle(raw.title, raw.name)
+	return normalizeSpecification(path, raw)
+}
+
+func normalizeSpecification(path string, raw rawSpecification) specification {
+	kind := kindUnknown
+	specVersion := ""
+	if raw.asyncAPI != "" {
+		kind = kindAsyncAPI
+		specVersion = raw.asyncAPI
+	}
+	if raw.openAPI != "" {
+		kind = kindOpenAPI
+		specVersion = raw.openAPI
+	}
+
+	return specification{
+		source:      path,
+		kind:        kind,
+		specVersion: specVersion,
+		version:     raw.version,
+		title:       raw.title,
+		name:        raw.name,
+		description: raw.description,
+		structure: specificationStructure{
+			channels:   sortedCopy(raw.channels),
+			operations: sortedCopy(raw.operations),
+			paths:      sortedCopy(raw.paths),
+		},
+	}
+}
+
+func objectKeys(value any) []string {
+	object, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
+	keys := make([]string, 0, len(object))
+	for key := range object {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+func stringValue(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return typed
+	case float64:
+		return strconv.FormatFloat(typed, 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(typed)
+	default:
+		return ""
+	}
+}
+
+func appendUnique(values []string, value string) []string {
+	if value == "" {
+		return values
+	}
+	for _, existing := range values {
+		if existing == value {
+			return values
+		}
+	}
+	return append(values, value)
+}
+
+func sortedCopy(values []string) []string {
+	copied := append([]string(nil), values...)
+	sort.Strings(copied)
+	return copied
 }
 
 func splitField(s string) (string, string) {
@@ -112,23 +243,27 @@ func scalar(value string) string {
 	return strings.TrimSpace(value)
 }
 
-func flowTitle(value string) (string, string) {
+func flowInfo(value string) rawSpecification {
+	var info rawSpecification
 	value = strings.TrimSpace(value)
 	if !strings.HasPrefix(value, "{") {
-		return "", ""
+		return info
 	}
 	value = strings.TrimSuffix(strings.TrimPrefix(value, "{"), "}")
-	var title, name string
 	for _, field := range strings.Split(value, ",") {
 		key, val := splitField(strings.TrimSpace(field))
 		switch key {
 		case "title":
-			title = scalar(val)
+			info.title = scalar(val)
 		case "name":
-			name = scalar(val)
+			info.name = scalar(val)
+		case "description":
+			info.description = scalar(val)
+		case "version":
+			info.version = scalar(val)
 		}
 	}
-	return title, name
+	return info
 }
 
 func preferredTitle(values ...string) string {

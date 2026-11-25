@@ -11,9 +11,13 @@ type documentInformation struct {
 	parser documentParser
 }
 
+func (i documentInformation) Catalog() (catalog, error) {
+	return collectDocuments(i.root, i.finder, i.parser)
+}
+
 func (i documentInformation) Message() (message, error) {
-	titles, err := collectTitles(i.root, i.finder, i.parser)
-	return newMessage(i.name, titles), err
+	documents, err := i.Catalog()
+	return newMessage(i.name, documents.Titles(kindAsyncAPI)), err
 }
 
 type fixedInformation struct {
