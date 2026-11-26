@@ -21,7 +21,7 @@ func commandFor(cfg config) (command, error) {
 			source: app.NewSource(root),
 			out:    os.Stdout,
 		}, nil
-	case cfg.server:
+	case cfg.web:
 		return serveCommand{
 			addr:      cfg.addr,
 			info:      app.NewSource(root),
@@ -42,6 +42,12 @@ func commandFor(cfg config) (command, error) {
 		return staticCommand{
 			info:      app.NewSource(root),
 			presenter: staticPresenter(cfg.markdown),
+			out:       os.Stdout,
+		}, nil
+	case cfg.txt:
+		return staticCommand{
+			info:      app.NewSource(root),
+			presenter: text.PlainText{},
 			out:       os.Stdout,
 		}, nil
 	default:

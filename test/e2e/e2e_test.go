@@ -79,7 +79,7 @@ func TestDebugFlagDumpsCatalog(t *testing.T) {
 	}
 }
 
-func TestHelpOmitsDebugFlag(t *testing.T) {
+func TestHelpListsCanonicalFlags(t *testing.T) {
 	cmd := exec.Command(docopsBinary, "-h")
 	cmd.Dir = repoRoot
 	output, err := cmd.CombinedOutput()
@@ -88,8 +88,38 @@ func TestHelpOmitsDebugFlag(t *testing.T) {
 	}
 
 	got := string(output)
-	if strings.Contains(got, "-debug") || strings.Contains(got, "  -d\n") {
-		t.Errorf("help output = %q, want debug flags hidden", got)
+	for _, want := range []string{"-html", "-md", "-txt", "-pdf", "-web", "-tui", "-debug"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("help output = %q, want %q", got, want)
+		}
+	}
+	for _, removed := range []string{"  -p\n", "-serve", "-server", "  -d\n"} {
+		if strings.Contains(got, removed) {
+			t.Errorf("help output = %q, want no %q", got, removed)
+		}
+	}
+}
+
+func TestTXTFlagOutput(t *testing.T) {
+	cmd := exec.Command(docopsBinary, "-txt")
+	cmd.Dir = repoRoot
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("running docops -txt: %v\n%s", err, output)
+	}
+
+	got := string(output)
+	for _, want := range []string{
+		"Hello World!",
+		"Specifications:",
+		"- AsyncAPI: Hello World Events",
+		"- Avro: Greeting",
+		"- JSON Schema: Hello World Schema",
+		"- OpenAPI: Hello World API",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("static plain text = %q, want %q", got, want)
+		}
 	}
 }
 
@@ -173,7 +203,7 @@ func TestMDFlagOutput(t *testing.T) {
 }
 
 func TestPDFFlagsOutput(t *testing.T) {
-	for _, flag := range []string{"-pdf", "-p"} {
+	for _, flag := range []string{"-pdf"} {
 		t.Run(flag, func(t *testing.T) {
 			cmd := exec.Command(docopsBinary, flag)
 			cmd.Dir = repoRoot
@@ -205,7 +235,7 @@ func TestPDFFlagsOutput(t *testing.T) {
 
 func TestServerModeServesHelloWorld(t *testing.T) {
 	addr := freeAddr(t)
-	cmd := exec.Command(docopsBinary, "--server="+addr)
+	cmd := exec.Command(docopsBinary, "--web="+addr)
 	cmd.Dir = repoRoot
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
