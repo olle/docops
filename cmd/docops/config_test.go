@@ -22,6 +22,32 @@ func TestParseConfigMDFlag(t *testing.T) {
 	}
 }
 
+func TestParseConfigPDFFlags(t *testing.T) {
+	for _, name := range []string{"-pdf", "-p"} {
+		t.Run(name, func(t *testing.T) {
+			cfg, err := parseConfig([]string{name})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cfg.pdf || cfg.html || cfg.markdown || cfg.server || cfg.tui || cfg.debug {
+				t.Errorf("config = %+v, want pdf only", cfg)
+			}
+		})
+	}
+}
+
+func TestParseConfigRejectsPDFWithHTML(t *testing.T) {
+	if _, err := parseConfig([]string{"-pdf", "-html"}); err == nil {
+		t.Error("expected -pdf with -html to fail")
+	}
+}
+
+func TestParseConfigRejectsShortPDFWithTUI(t *testing.T) {
+	if _, err := parseConfig([]string{"-p", "-tui"}); err == nil {
+		t.Error("expected -p with -tui to fail")
+	}
+}
+
 func TestParseConfigDebugFlags(t *testing.T) {
 	for _, name := range []string{"-debug", "--debug", "-d", "--d"} {
 		t.Run(name, func(t *testing.T) {
@@ -29,7 +55,7 @@ func TestParseConfigDebugFlags(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !cfg.debug || cfg.server || cfg.tui || cfg.html || cfg.markdown {
+			if !cfg.debug || cfg.server || cfg.tui || cfg.html || cfg.markdown || cfg.pdf {
 				t.Errorf("config = %+v, want debug only", cfg)
 			}
 		})

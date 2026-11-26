@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/olle/docops/internal/app"
+	"github.com/olle/docops/internal/ui/pdf"
 	"github.com/olle/docops/internal/ui/text"
 	"github.com/olle/docops/internal/ui/tui"
 )
@@ -30,6 +31,12 @@ func commandFor(cfg config) (command, error) {
 	case cfg.tui:
 		return tuiCommand{
 			screen: tui.New(app.NewSource(root), tui.Options{In: os.Stdin, Out: os.Stdout}),
+		}, nil
+	case cfg.pdf:
+		return staticCommand{
+			info:      app.NewSource(root),
+			presenter: pdf.Presenter{},
+			out:       os.Stdout,
 		}, nil
 	case cfg.html || cfg.markdown:
 		return staticCommand{

@@ -172,6 +172,37 @@ func TestMDFlagOutput(t *testing.T) {
 	}
 }
 
+func TestPDFFlagsOutput(t *testing.T) {
+	for _, flag := range []string{"-pdf", "-p"} {
+		t.Run(flag, func(t *testing.T) {
+			cmd := exec.Command(docopsBinary, flag)
+			cmd.Dir = repoRoot
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("running docops %s: %v\n%s", flag, err, output)
+			}
+
+			got := string(output)
+			if !strings.HasPrefix(got, "%PDF-1.4\n") {
+				t.Errorf("PDF output = %q, want PDF header", got)
+			}
+			for _, want := range []string{
+				"/Type /Catalog",
+				"(Hello World!) Tj",
+				"(AsyncAPI: Hello World Events) Tj",
+				"(Avro: Greeting) Tj",
+				"(JSON Schema: Hello World Schema) Tj",
+				"(OpenAPI: Hello World API) Tj",
+				"%%EOF\n",
+			} {
+				if !strings.Contains(got, want) {
+					t.Errorf("PDF output missing %q", want)
+				}
+			}
+		})
+	}
+}
+
 func TestServerModeServesHelloWorld(t *testing.T) {
 	addr := freeAddr(t)
 	cmd := exec.Command(docopsBinary, "--server="+addr)

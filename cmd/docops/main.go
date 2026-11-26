@@ -22,6 +22,7 @@ type config struct {
 	tui      bool
 	html     bool
 	markdown bool
+	pdf      bool
 	debug    bool
 	addr     string
 }
@@ -86,19 +87,21 @@ func parseConfig(args []string) (config, error) {
 	tui := fs.Bool("tui", false, "run the interactive terminal interface")
 	html := fs.Bool("html", false, "render static HTML")
 	md := fs.Bool("md", false, "render static Markdown")
+	pdf := fs.Bool("pdf", false, "render a published PDF catalog")
+	pdfShort := fs.Bool("p", false, "alias for -pdf")
 
 	if err := fs.Parse(normalizeServerArgs(args)); err != nil {
 		return config{}, err
 	}
 
 	modes := 0
-	for _, enabled := range []bool{server.enabled, *tui, *html, *md, debug} {
+	for _, enabled := range []bool{server.enabled, *tui, *html, *md, *pdf || *pdfShort, debug} {
 		if enabled {
 			modes++
 		}
 	}
 	if modes > 1 {
-		return config{}, errors.New("only one of -server, -tui, -html, -md, or -debug can be used at a time")
+		return config{}, errors.New("only one of -server, -tui, -html, -md, -pdf, or -debug can be used at a time")
 	}
 
 	return config{
@@ -106,6 +109,7 @@ func parseConfig(args []string) (config, error) {
 		tui:      *tui,
 		html:     *html,
 		markdown: *md,
+		pdf:      *pdf || *pdfShort,
 		debug:    debug,
 		addr:     server.addr,
 	}, nil
