@@ -1,25 +1,26 @@
-package main
+package text
 
 import (
 	"io"
 
 	"github.com/olle/docops/internal/assets"
+	"github.com/olle/docops/internal/view"
 )
 
-type htmlWriter struct{}
+type HTML struct{}
 
-func (htmlWriter) ContentType() string {
+func (HTML) ContentType() string {
 	return "text/html; charset=utf-8"
 }
 
-func (htmlWriter) Render(w io.Writer, msg message) error {
-	body := []htmlNode{htmlH1(msg.greeting)}
-	if len(msg.specifications) > 0 {
-		items := make([]htmlNode, 0, len(msg.specifications))
-		for _, spec := range msg.specifications {
+func (HTML) Render(w io.Writer, snapshot view.Snapshot) error {
+	body := []htmlNode{htmlH1(snapshot.Greeting)}
+	if summaries := view.Summaries(snapshot); len(summaries) > 0 {
+		items := make([]htmlNode, 0, len(summaries))
+		for _, doc := range summaries {
 			items = append(items, htmlElement{tag: "li", children: []htmlNode{
-				htmlElement{tag: "strong", children: []htmlNode{htmlText(spec.kind.Label())}},
-				htmlText(": " + spec.title),
+				htmlElement{tag: "strong", children: []htmlNode{htmlText(doc.KindLabel)}},
+				htmlText(": " + doc.DisplayName),
 			}})
 		}
 		body = append(body, htmlElement{tag: "h2", children: []htmlNode{htmlText("Specifications")}})
@@ -32,7 +33,7 @@ func (htmlWriter) Render(w io.Writer, msg message) error {
 		children: []htmlNode{
 			htmlElement{tag: "head", children: []htmlNode{
 				htmlElement{tag: "meta", attrs: []htmlAttribute{{name: "charset", value: "utf-8"}}, void: true},
-				htmlElement{tag: "title", children: []htmlNode{htmlText(msg.greeting)}},
+				htmlElement{tag: "title", children: []htmlNode{htmlText(snapshot.Greeting)}},
 				htmlElement{tag: "style", children: []htmlNode{htmlRaw(assets.CSS)}},
 			}},
 			htmlElement{tag: "body", children: []htmlNode{

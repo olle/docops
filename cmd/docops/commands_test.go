@@ -2,37 +2,32 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/olle/docops/internal/view"
 )
 
-type fakeInformation struct {
-	msg message
+type fakeSnapshotSource struct {
+	snapshot view.Snapshot
+	err      error
 }
 
-func (f fakeInformation) Message() (message, error) {
-	return f.msg, nil
-}
-
-type fakeCatalogSource struct {
-	cat catalog
-	err error
-}
-
-func (f fakeCatalogSource) Catalog() (catalog, error) {
-	return f.cat, f.err
+func (f fakeSnapshotSource) Snapshot(context.Context) (view.Snapshot, error) {
+	return f.snapshot, f.err
 }
 
 type recordingPresenter struct {
-	msg message
+	snapshot view.Snapshot
 }
 
-func (p *recordingPresenter) Render(w io.Writer, msg message) error {
-	p.msg = msg
-	_, err := io.WriteString(w, "rendered:"+msg.greeting)
+func (p *recordingPresenter) Render(w io.Writer, snapshot view.Snapshot) error {
+	p.snapshot = snapshot
+	_, err := io.WriteString(w, "rendered:"+snapshot.Greeting)
 	return err
 }
 
@@ -41,11 +36,11 @@ func (*recordingPresenter) ContentType() string {
 }
 
 type recordingScreen struct {
-	msg message
+	ran bool
 }
 
-func (s *recordingScreen) Present(msg message) error {
-	s.msg = msg
+func (s *recordingScreen) Run(context.Context) error {
+	s.ran = true
 	return nil
 }
 
@@ -62,52 +57,46 @@ func (s *recordingHTTPServer) ListenAndServe(addr string, handler http.Handler) 
 
 func TestGreetCommandUsesOnlyInformationAndPresenter(t *testing.T) {
 	var out bytes.Buffer
-	info := fakeInformation{msg: newMessage("Ada", nil)}
+	source := fakeSnapshotSource{snapshot: view.Snapshot{Greeting: "Hello Ada!"}}
 	presenter := &recordingPresenter{}
-	if err := (greetCommand{info: info, presenter: presenter, out: &out}).Run(); err != nil {
+	if err := (greetCommand{info: source, presenter: presenter, out: &out}).Run(); err != nil {
 		t.Fatal(err)
 	}
 	if out.String() != "rendered:Hello Ada!" {
 		t.Errorf("output = %q, want %q", out.String(), "rendered:Hello Ada!")
 	}
-	if presenter.msg.greeting != info.msg.greeting {
-		t.Errorf("presented %q, want %q", presenter.msg.greeting, info.msg.greeting)
+	if presenter.snapshot.Greeting != source.snapshot.Greeting {
+		t.Errorf("presented %q, want %q", presenter.snapshot.Greeting, source.snapshot.Greeting)
 	}
 }
 
 func TestStaticCommandWritesAndUsesPresenter(t *testing.T) {
 	var out bytes.Buffer
-	info := fakeInformation{msg: newMessage(defaultName, nil)}
+	source := fakeSnapshotSource{snapshot: view.Snapshot{Greeting: "Hello World!"}}
 	presenter := &recordingPresenter{}
-	if err := (staticCommand{info: info, presenter: presenter, out: &out}).Run(); err != nil {
+	if err := (staticCommand{info: source, presenter: presenter, out: &out}).Run(); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := out.String(), "rendered:Hello World!"; got != want {
 		t.Errorf("output = %q, want %q", got, want)
 	}
-	if presenter.msg.greeting != info.msg.greeting {
-		t.Errorf("presented %q, want %q", presenter.msg.greeting, info.msg.greeting)
-	}
 }
 
-func TestTUICommandUsesOnlyInformationAndPresenter(t *testing.T) {
-	info := fakeInformation{msg: newMessage("Ada", []specificationSummary{{kind: kindOpenAPI, title: "Events API"}})}
+func TestTUICommandUsesOnlyScreen(t *testing.T) {
 	screen := &recordingScreen{}
-	if err := (tuiCommand{info: info, presenter: screen}).Run(); err != nil {
+	if err := (tuiCommand{screen: screen}).Run(); err != nil {
 		t.Fatal(err)
 	}
-	if screen.msg.greeting != info.msg.greeting ||
-		len(screen.msg.specifications) != 1 ||
-		screen.msg.specifications[0] != info.msg.specifications[0] {
-		t.Errorf("presented %+v, want %+v", screen.msg, info.msg)
+	if !screen.ran {
+		t.Error("screen was not run")
 	}
 }
 
 func TestServeCommandUsesOnlyInformationAndPresenter(t *testing.T) {
-	info := fakeInformation{msg: newMessage("Ada", nil)}
+	source := fakeSnapshotSource{snapshot: view.Snapshot{Greeting: "Hello Ada!"}}
 	presenter := &recordingPresenter{}
 	server := &recordingHTTPServer{}
-	if err := (serveCommand{addr: "127.0.0.1:0", info: info, presenter: presenter, server: server}).Run(); err != nil {
+	if err := (serveCommand{addr: "127.0.0.1:0", info: source, presenter: presenter, server: server}).Run(); err != nil {
 		t.Fatal(err)
 	}
 	if server.addr != "127.0.0.1:0" || server.handler == nil {
@@ -124,21 +113,21 @@ func TestServeCommandUsesOnlyInformationAndPresenter(t *testing.T) {
 	}
 }
 
-func TestDebugCommandDumpsCatalogString(t *testing.T) {
+func TestDebugCommandDumpsSnapshot(t *testing.T) {
 	var out bytes.Buffer
-	documents := catalog{documents: []specification{{kind: kindAsyncAPI, title: "Events API"}}}
-	command := debugCommand{source: fakeCatalogSource{cat: documents}, out: &out}
+	snapshot := view.Snapshot{Documents: []view.Document{{KindLabel: "AsyncAPI", DisplayName: "Events API"}}}
+	command := debugCommand{source: fakeSnapshotSource{snapshot: snapshot}, out: &out}
 	if err := command.Run(); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := out.String(), documents.String(); got != want {
+	if got, want := out.String(), view.Debug(snapshot); got != want {
 		t.Errorf("debug output = %q, want %q", got, want)
 	}
 }
 
-func TestDebugCommandPropagatesCatalogError(t *testing.T) {
-	wantErr := errors.New("catalog unavailable")
-	command := debugCommand{source: fakeCatalogSource{err: wantErr}, out: io.Discard}
+func TestDebugCommandPropagatesSourceError(t *testing.T) {
+	wantErr := errors.New("snapshot unavailable")
+	command := debugCommand{source: fakeSnapshotSource{err: wantErr}, out: io.Discard}
 	if err := command.Run(); !errors.Is(err, wantErr) {
 		t.Errorf("error = %v, want %v", err, wantErr)
 	}

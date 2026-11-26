@@ -1,4 +1,4 @@
-package main
+package text
 
 import (
 	"fmt"
@@ -53,8 +53,6 @@ func (t htmlText) writeHTML(w io.Writer) error {
 	return err
 }
 
-// htmlRaw writes trusted markup verbatim. It is used for the embedded
-// stylesheet, where HTML escaping would corrupt CSS selectors such as `>`.
 type htmlRaw string
 
 func (r htmlRaw) writeHTML(w io.Writer) error {

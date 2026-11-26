@@ -133,3 +133,9 @@ func TestParseConfigRejectsAddrFlag(t *testing.T) {
 		t.Error("expected removed -addr flag to fail")
 	}
 }
+
+func TestParseConfigRejectsServerAndTUI(t *testing.T) {
+	if _, err := parseConfig([]string{"-server", "-tui"}); err == nil {
+		t.Error("expected -server and -tui to be mutually exclusive")
+	}
+}

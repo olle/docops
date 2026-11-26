@@ -1,4 +1,4 @@
-package main
+package docops
 
 import (
 	"os"
@@ -32,7 +32,7 @@ func TestDocumentGlobFinder(t *testing.T) {
 		write(path)
 	}
 
-	paths, err := (documentGlobFinder{}).Find(root)
+	paths, err := (GlobFinder{}).Find(root)
 	if err != nil {
 		t.Fatal(err)
 	}

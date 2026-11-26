@@ -1,6 +1,12 @@
 package main
 
-import "os"
+import (
+	"os"
+
+	"github.com/olle/docops/internal/app"
+	"github.com/olle/docops/internal/ui/text"
+	"github.com/olle/docops/internal/ui/tui"
+)
 
 func commandFor(cfg config) (command, error) {
 	root, err := os.Getwd()
@@ -11,49 +17,38 @@ func commandFor(cfg config) (command, error) {
 	switch {
 	case cfg.debug:
 		return debugCommand{
-			source: documentSource(root),
+			source: app.NewSource(root),
 			out:    os.Stdout,
 		}, nil
 	case cfg.server:
 		return serveCommand{
 			addr:      cfg.addr,
-			info:      documentSource(root),
-			presenter: htmlWriter{},
+			info:      app.NewSource(root),
+			presenter: text.HTML{},
 			server:    stdHTTPServer{},
 		}, nil
 	case cfg.tui:
 		return tuiCommand{
-			info:      documentSource(root),
-			presenter: tuiScreen{out: os.Stdout, in: os.Stdin, term: stdioTerminal{}},
+			screen: tui.New(app.NewSource(root), tui.Options{In: os.Stdin, Out: os.Stdout}),
 		}, nil
 	case cfg.html || cfg.markdown:
 		return staticCommand{
-			info:      documentSource(root),
+			info:      app.NewSource(root),
 			presenter: staticPresenter(cfg.markdown),
 			out:       os.Stdout,
 		}, nil
 	default:
 		return greetCommand{
-			info:      fixedInformation{msg: newMessage(defaultName, nil)},
-			presenter: plainTextWriter{},
+			info:      app.NewFixedSource(defaultName, nil),
+			presenter: text.PlainText{},
 			out:       os.Stdout,
 		}, nil
 	}
 }
 
-func documentSource(root string) documentInformation {
-	return documentInformation{
-		name:    defaultName,
-		root:    root,
-		finder:  documentGlobFinder{},
-		sniffer: fileDocumentSniffer{},
-		parser:  fileDocumentParser{},
-	}
-}
-
-func staticPresenter(markdown bool) presenter {
+func staticPresenter(markdown bool) app.Presenter {
 	if markdown {
-		return markdownWriter{}
+		return text.Markdown{}
 	}
-	return htmlWriter{}
+	return text.HTML{}
 }

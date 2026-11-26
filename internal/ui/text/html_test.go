@@ -1,4 +1,4 @@
-package main
+package text
 
 import (
 	"bytes"
@@ -6,28 +6,34 @@ import (
 	"testing"
 
 	"github.com/olle/docops/internal/assets"
+	"github.com/olle/docops/internal/view"
 )
 
-func TestHTMLWriterRender(t *testing.T) {
+func TestHTMLRender(t *testing.T) {
 	var buf bytes.Buffer
-	msg := newMessage("Ada & Bob", []specificationSummary{{kind: kindAsyncAPI, title: "<Events>"}})
-	if err := (htmlWriter{}).Render(&buf, msg); err != nil {
+	snapshot := view.Snapshot{
+		Greeting: "Ada & Bob",
+		Documents: []view.Document{
+			{Kind: "asyncapi", KindLabel: "AsyncAPI", DisplayName: "<Events>"},
+		},
+	}
+	if err := (HTML{}).Render(&buf, snapshot); err != nil {
 		t.Fatal(err)
 	}
 
 	want := "<!doctype html>\n" +
-		`<html lang="en"><head><meta charset="utf-8"><title>Hello Ada &amp; Bob!</title><style>` +
+		`<html lang="en"><head><meta charset="utf-8"><title>Ada &amp; Bob</title><style>` +
 		assets.CSS +
 		`</style></head>` +
-		`<body><main><h1>Hello Ada &amp; Bob!</h1><h2>Specifications</h2><ul><li><strong>AsyncAPI</strong>: &lt;Events&gt;</li></ul></main></body></html>` + "\n"
+		`<body><main><h1>Ada &amp; Bob</h1><h2>Specifications</h2><ul><li><strong>AsyncAPI</strong>: &lt;Events&gt;</li></ul></main></body></html>` + "\n"
 	if got := buf.String(); got != want {
 		t.Errorf("HTML = %q, want %q", got, want)
 	}
 }
 
-func TestHTMLWriterRenderWithoutSpecifications(t *testing.T) {
+func TestHTMLRenderWithoutSpecifications(t *testing.T) {
 	var buf bytes.Buffer
-	if err := (htmlWriter{}).Render(&buf, newMessage("World", nil)); err != nil {
+	if err := (HTML{}).Render(&buf, view.Snapshot{Greeting: "Hello World!"}); err != nil {
 		t.Fatal(err)
 	}
 

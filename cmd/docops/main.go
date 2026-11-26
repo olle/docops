@@ -8,11 +8,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/olle/docops/internal/app"
 )
 
 const (
 	defaultAddr = "127.0.0.1:8080"
-	defaultName = "World"
+	defaultName = app.DefaultName
 )
 
 type config struct {

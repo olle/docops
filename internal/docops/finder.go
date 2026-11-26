@@ -1,4 +1,4 @@
-package main
+package docops
 
 import (
 	"io/fs"
@@ -8,9 +8,9 @@ import (
 
 var documentGlobs = []string{"*.yaml", "*.yml", "*.json", "*.avsc"}
 
-type documentGlobFinder struct{}
+type GlobFinder struct{}
 
-func (documentGlobFinder) Find(root string) ([]string, error) {
+func (GlobFinder) Find(root string) ([]string, error) {
 	var paths []string
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {

@@ -1,25 +1,29 @@
-package main
+package docops
 
 import (
 	"errors"
 	"fmt"
 )
 
-type documentFinder interface {
+type Finder interface {
 	Find(root string) ([]string, error)
 }
 
-type documentParser interface {
-	Parse(path string) (specification, error)
+type Sniffer interface {
+	Detect(path string) (Kind, error)
 }
 
-func collectDocuments(root string, finder documentFinder, sniffer documentSniffer, parser documentParser) (catalog, error) {
+type Parser interface {
+	Parse(path string) (Specification, error)
+}
+
+func Collect(root string, finder Finder, sniffer Sniffer, parser Parser) (Catalog, error) {
 	paths, err := finder.Find(root)
 	if err != nil {
-		return catalog{}, err
+		return Catalog{}, err
 	}
 
-	var documents []specification
+	var documents []Specification
 	var errs []error
 	for _, path := range paths {
 		kind, err := sniffer.Detect(path)
@@ -27,7 +31,7 @@ func collectDocuments(root string, finder documentFinder, sniffer documentSniffe
 			errs = append(errs, fmt.Errorf("%s: %w", path, err))
 			continue
 		}
-		if kind == kindUnknown {
+		if kind == UnknownKind {
 			continue
 		}
 		doc, err := parser.Parse(path)
@@ -35,10 +39,10 @@ func collectDocuments(root string, finder documentFinder, sniffer documentSniffe
 			errs = append(errs, fmt.Errorf("%s: %w", path, err))
 			continue
 		}
-		if doc.kind != kind {
+		if doc.Kind != kind {
 			continue
 		}
 		documents = append(documents, doc)
 	}
-	return catalog{documents: documents}, errors.Join(errs...)
+	return NewCatalog(documents), errors.Join(errs...)
 }

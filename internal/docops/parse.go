@@ -1,4 +1,4 @@
-package main
+package docops
 
 import (
 	"encoding/json"
@@ -8,17 +8,17 @@ import (
 	"strings"
 )
 
-type fileDocumentParser struct{}
+type FileParser struct{}
 
-func (fileDocumentParser) Parse(path string) (specification, error) {
+func (FileParser) Parse(path string) (Specification, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return specification{}, err
+		return Specification{}, err
 	}
 	if strings.HasPrefix(strings.TrimSpace(string(data)), "{") {
-		return parseJSONDocument(path, data)
+		return ParseJSONDocument(path, data)
 	}
-	return parseYAMLDocument(path, data), nil
+	return ParseYAMLDocument(path, data), nil
 }
 
 type rawSpecification struct {
@@ -39,39 +39,39 @@ type rawSpecification struct {
 	fields      []string
 }
 
-func parseJSONDocument(path string, data []byte) (specification, error) {
+func ParseJSONDocument(path string, data []byte) (Specification, error) {
 	var raw map[string]any
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return specification{}, err
+		return Specification{}, err
 	}
 
 	parsed := rawSpecification{
-		asyncAPI:    stringValue(raw["asyncapi"]),
-		avroType:    stringValue(raw["type"]),
-		openAPI:     stringValue(raw["openapi"]),
-		jsonSchema:  stringValue(raw["$schema"]),
-		id:          preferredTitle(stringValue(raw["$id"]), stringValue(raw["id"])),
-		namespace:   stringValue(raw["namespace"]),
-		name:        stringValue(raw["name"]),
-		title:       stringValue(raw["title"]),
-		description: preferredTitle(stringValue(raw["description"]), stringValue(raw["doc"])),
-		version:     stringValue(raw["version"]),
-		channels:    objectKeys(raw["channels"]),
-		operations:  objectKeys(raw["operations"]),
-		paths:       objectKeys(raw["paths"]),
-		properties:  objectKeys(raw["properties"]),
-		fields:      avroFieldNames(raw["fields"]),
+		asyncAPI:    StringValue(raw["asyncapi"]),
+		avroType:    StringValue(raw["type"]),
+		openAPI:     StringValue(raw["openapi"]),
+		jsonSchema:  StringValue(raw["$schema"]),
+		id:          PreferredTitle(StringValue(raw["$id"]), StringValue(raw["id"])),
+		namespace:   StringValue(raw["namespace"]),
+		name:        StringValue(raw["name"]),
+		title:       StringValue(raw["title"]),
+		description: PreferredTitle(StringValue(raw["description"]), StringValue(raw["doc"])),
+		version:     StringValue(raw["version"]),
+		channels:    ObjectKeys(raw["channels"]),
+		operations:  ObjectKeys(raw["operations"]),
+		paths:       ObjectKeys(raw["paths"]),
+		properties:  ObjectKeys(raw["properties"]),
+		fields:      AvroFieldNames(raw["fields"]),
 	}
 	if info, ok := raw["info"].(map[string]any); ok {
-		parsed.title = preferredTitle(stringValue(info["title"]), stringValue(info["name"]))
-		parsed.description = stringValue(info["description"])
-		parsed.version = stringValue(info["version"])
+		parsed.title = PreferredTitle(StringValue(info["title"]), StringValue(info["name"]))
+		parsed.description = StringValue(info["description"])
+		parsed.version = StringValue(info["version"])
 	}
-	parsed.title = preferredTitle(parsed.title, parsed.name)
+	parsed.title = PreferredTitle(parsed.title, parsed.name)
 	return normalizeSpecification(path, parsed), nil
 }
 
-func parseYAMLDocument(path string, data []byte) specification {
+func ParseYAMLDocument(path string, data []byte) Specification {
 	raw := rawSpecification{}
 	inInfo := false
 	section := ""
@@ -125,9 +125,9 @@ func parseYAMLDocument(path string, data []byte) specification {
 				}
 			case "info":
 				info := flowInfo(value)
-				raw.title = preferredTitle(info.title, info.name, raw.title)
-				raw.description = preferredTitle(info.description, raw.description)
-				raw.version = preferredTitle(info.version, raw.version)
+				raw.title = PreferredTitle(info.title, info.name, raw.title)
+				raw.description = PreferredTitle(info.description, raw.description)
+				raw.version = PreferredTitle(info.version, raw.version)
 				inInfo = value == ""
 			case "channels", "operations", "paths", "properties", "fields":
 				if value == "" {
@@ -181,53 +181,53 @@ func parseYAMLDocument(path string, data []byte) specification {
 		}
 	}
 
-	raw.title = preferredTitle(raw.title, raw.name)
+	raw.title = PreferredTitle(raw.title, raw.name)
 	return normalizeSpecification(path, raw)
 }
 
-func normalizeSpecification(path string, raw rawSpecification) specification {
-	kind := kindUnknown
+func normalizeSpecification(path string, raw rawSpecification) Specification {
+	kind := UnknownKind
 	specVersion := ""
 	if raw.asyncAPI != "" {
-		kind = kindAsyncAPI
+		kind = AsyncAPIKind
 		specVersion = raw.asyncAPI
 	}
 	if raw.openAPI != "" {
-		kind = kindOpenAPI
+		kind = OpenAPIKind
 		specVersion = raw.openAPI
 	}
 	if raw.jsonSchema != "" {
-		kind = kindJSONSchema
+		kind = JSONSchemaKind
 		specVersion = schemaDialect(raw.jsonSchema)
 	}
 	if isAvroType(raw.avroType) {
-		kind = kindAvro
+		kind = AvroKind
 	}
 
 	id := raw.id
-	if kind == kindAvro {
-		id = preferredTitle(id, qualifiedAvroName(raw.namespace, raw.name))
+	if kind == AvroKind {
+		id = PreferredTitle(id, qualifiedAvroName(raw.namespace, raw.name))
 	}
-	return specification{
-		source:      path,
-		kind:        kind,
-		specVersion: specVersion,
-		id:          id,
-		version:     raw.version,
-		title:       raw.title,
-		name:        raw.name,
-		description: raw.description,
-		structure: specificationStructure{
-			channels:   sortedCopy(raw.channels),
-			operations: sortedCopy(raw.operations),
-			paths:      sortedCopy(raw.paths),
-			properties: sortedCopy(raw.properties),
-			fields:     sortedCopy(raw.fields),
+	return Specification{
+		Source:      path,
+		Kind:        kind,
+		SpecVersion: specVersion,
+		ID:          id,
+		Version:     raw.version,
+		Title:       raw.title,
+		Name:        raw.name,
+		Description: raw.description,
+		Structure: Structure{
+			Channels:   SortedCopy(raw.channels),
+			Operations: SortedCopy(raw.operations),
+			Paths:      SortedCopy(raw.paths),
+			Properties: SortedCopy(raw.properties),
+			Fields:     SortedCopy(raw.fields),
 		},
 	}
 }
 
-func objectKeys(value any) []string {
+func ObjectKeys(value any) []string {
 	object, ok := value.(map[string]any)
 	if !ok {
 		return nil
@@ -239,7 +239,7 @@ func objectKeys(value any) []string {
 	return keys
 }
 
-func stringValue(value any) string {
+func StringValue(value any) string {
 	switch typed := value.(type) {
 	case string:
 		return typed
@@ -264,7 +264,7 @@ func appendUnique(values []string, value string) []string {
 	return append(values, value)
 }
 
-func sortedCopy(values []string) []string {
+func SortedCopy(values []string) []string {
 	copied := append([]string(nil), values...)
 	sort.Strings(copied)
 	return copied
@@ -335,7 +335,7 @@ func isAvroType(value string) bool {
 	}
 }
 
-func avroFieldNames(value any) []string {
+func AvroFieldNames(value any) []string {
 	items, ok := value.([]any)
 	if !ok {
 		return nil
@@ -346,7 +346,7 @@ func avroFieldNames(value any) []string {
 		if !ok {
 			continue
 		}
-		names = appendUnique(names, stringValue(field["name"]))
+		names = appendUnique(names, StringValue(field["name"]))
 	}
 	return names
 }
@@ -367,7 +367,7 @@ func schemaDialect(uri string) string {
 	return uri
 }
 
-func preferredTitle(values ...string) string {
+func PreferredTitle(values ...string) string {
 	for _, value := range values {
 		if value != "" {
 			return value

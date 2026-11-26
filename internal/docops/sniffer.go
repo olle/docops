@@ -1,4 +1,4 @@
-package main
+package docops
 
 import (
 	"errors"
@@ -9,58 +9,54 @@ import (
 
 const sniffLimit = 64 * 1024
 
-type documentSniffer interface {
-	Detect(path string) (specificationKind, error)
-}
+type FileSniffer struct{}
 
-type fileDocumentSniffer struct{}
-
-func (fileDocumentSniffer) Detect(path string) (specificationKind, error) {
+func (FileSniffer) Detect(path string) (Kind, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return kindUnknown, err
+		return UnknownKind, err
 	}
 	defer file.Close()
 
 	buffer := make([]byte, sniffLimit)
 	n, err := io.ReadFull(file, buffer)
 	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
-		return kindUnknown, err
+		return UnknownKind, err
 	}
-	return detectSpecificationKind(string(buffer[:n])), nil
+	return DetectSpecificationKind(string(buffer[:n])), nil
 }
 
-func detectSpecificationKind(prefix string) specificationKind {
+func DetectSpecificationKind(prefix string) Kind {
 	for _, line := range strings.Split(prefix, "\n") {
 		line = strings.TrimSuffix(line, "\r")
 		if strings.HasPrefix(line, "asyncapi:") {
-			return kindAsyncAPI
+			return AsyncAPIKind
 		}
 		if strings.HasPrefix(line, "openapi:") {
-			return kindOpenAPI
+			return OpenAPIKind
 		}
 		if strings.HasPrefix(line, "$schema:") && strings.Contains(line, "json-schema.org") {
-			return kindJSONSchema
+			return JSONSchemaKind
 		}
 	}
 
 	schema := strings.Index(prefix, `"$schema"`)
 	if schema >= 0 && strings.Contains(prefix[schema:], "json-schema.org") {
-		return kindJSONSchema
+		return JSONSchemaKind
 	}
 	if isAvroPrefix(prefix) {
-		return kindAvro
+		return AvroKind
 	}
 
 	async := strings.Index(prefix, `"asyncapi"`)
 	open := strings.Index(prefix, `"openapi"`)
 	switch {
 	case async >= 0 && (open < 0 || async < open):
-		return kindAsyncAPI
+		return AsyncAPIKind
 	case open >= 0:
-		return kindOpenAPI
+		return OpenAPIKind
 	default:
-		return kindUnknown
+		return UnknownKind
 	}
 }
 

@@ -5,6 +5,9 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/olle/docops/internal/app"
+	"github.com/olle/docops/internal/view"
 )
 
 type httpServer interface {
@@ -26,10 +29,10 @@ func (stdHTTPServer) ListenAndServe(addr string, handler http.Handler) error {
 	return err
 }
 
-func handlerFor(presenter webPresenter, msg message) http.Handler {
+func handlerFor(presenter app.WebPresenter, snapshot view.Snapshot) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", presenter.ContentType())
-		if err := presenter.Render(w, msg); err != nil {
+		if err := presenter.Render(w, snapshot); err != nil {
 			log.Printf("rendering response: %v", err)
 		}
 	})
