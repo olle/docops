@@ -6,7 +6,7 @@ all: build run
 
 .PHONY: run
 run: verify
-	$(GO) run ./cmd/docops -d
+	$(GO) run ./cmd/docops -debug
 
 ##
 ## Cross-compile the docops Go binary for macOS.
@@ -28,7 +28,7 @@ build-macos:
 .PHONY: example
 example: build-macos
 	@echo "Serving examples/hello-world at http://localhost:8080"
-	cd examples/hello-world && ../../bin/docops -server
+	cd examples/hello-world && ../../bin/docops -web
 
 ##
 ## Regenerate embedded assets (e.g. minified CSS) from their sources.
