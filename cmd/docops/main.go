@@ -21,7 +21,7 @@ type config struct {
 	markdown bool
 	txt      bool
 	pdf      bool
-	debug    bool
+	debug    int
 	addr     string
 }
 
@@ -82,7 +82,10 @@ func parseConfig(args []string) (config, error) {
 	md := fs.Bool("md", false, "render static Markdown")
 	txt := fs.Bool("txt", false, "render static plain text")
 	pdf := fs.Bool("pdf", false, "render a published PDF catalog")
-	debug := fs.Bool("debug", false, "dump the document catalog")
+	d := fs.Bool("d", false, "overview debug output")
+	dd := fs.Bool("dd", false, "medium debug output")
+	ddd := fs.Bool("ddd", false, "full debug output")
+	debug := fs.Bool("debug", false, "alias for -d")
 
 	if err := fs.Parse(args); err != nil {
 		return config{}, err
@@ -91,14 +94,33 @@ func parseConfig(args []string) (config, error) {
 		return config{}, errors.New("unexpected positional arguments")
 	}
 
+	debugDepth := 0
+	for _, flag := range []struct {
+		enabled *bool
+		depth   int
+	}{
+		{enabled: d, depth: 1},
+		{enabled: dd, depth: 2},
+		{enabled: ddd, depth: 3},
+		{enabled: debug, depth: 1},
+	} {
+		if !*flag.enabled {
+			continue
+		}
+		if debugDepth > 0 {
+			return config{}, errors.New("only one debug depth flag can be used at a time")
+		}
+		debugDepth = flag.depth
+	}
+
 	modes := 0
-	for _, enabled := range []bool{web.enabled, *tui, *html, *md, *txt, *pdf, *debug} {
+	for _, enabled := range []bool{web.enabled, *tui, *html, *md, *txt, *pdf, debugDepth > 0} {
 		if enabled {
 			modes++
 		}
 	}
 	if modes > 1 {
-		return config{}, errors.New("only one of -html, -md, -txt, -pdf, -web, -tui, or -debug can be used at a time")
+		return config{}, errors.New("only one of -html, -md, -txt, -pdf, -web, -tui, -d, -dd, -ddd, or -debug can be used at a time")
 	}
 
 	return config{
@@ -108,7 +130,7 @@ func parseConfig(args []string) (config, error) {
 		markdown: *md,
 		txt:      *txt,
 		pdf:      *pdf,
-		debug:    *debug,
+		debug:    debugDepth,
 		addr:     web.addr,
 	}, nil
 }

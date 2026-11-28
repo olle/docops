@@ -16,10 +16,11 @@ func commandFor(cfg config) (command, error) {
 	}
 
 	switch {
-	case cfg.debug:
+	case cfg.debug > 0:
 		return debugCommand{
 			source: app.NewSource(root),
 			out:    os.Stdout,
+			depth:  cfg.debug,
 		}, nil
 	case cfg.web:
 		return serveCommand{

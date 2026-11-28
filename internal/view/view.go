@@ -100,6 +100,21 @@ func Summaries(snapshot Snapshot) []Document {
 }
 
 func Debug(snapshot Snapshot) string {
+	return DebugAtDepth(snapshot, 3)
+}
+
+func DebugAtDepth(snapshot Snapshot, depth int) string {
+	switch {
+	case depth <= 1:
+		return debugOverview(snapshot)
+	case depth == 2:
+		return debugCatalog(snapshot, false)
+	default:
+		return debugCatalog(snapshot, true)
+	}
+}
+
+func debugOverview(snapshot Snapshot) string {
 	var b strings.Builder
 	b.WriteString("catalog:\n")
 	fmt.Fprintf(&b, "  count: %d\n", len(snapshot.Documents))
@@ -108,12 +123,26 @@ func Debug(snapshot Snapshot) string {
 	}
 	b.WriteString("  documents:\n")
 	for _, doc := range snapshot.Documents {
-		b.WriteString(indentDebugBlock("- "+debugDocument(doc), "    "))
+		fmt.Fprintf(&b, "    - %s: %s\n", doc.KindLabel, doc.DisplayName)
 	}
 	return b.String()
 }
 
-func debugDocument(doc Document) string {
+func debugCatalog(snapshot Snapshot, includeStructure bool) string {
+	var b strings.Builder
+	b.WriteString("catalog:\n")
+	fmt.Fprintf(&b, "  count: %d\n", len(snapshot.Documents))
+	if len(snapshot.Documents) == 0 {
+		return b.String()
+	}
+	b.WriteString("  documents:\n")
+	for _, doc := range snapshot.Documents {
+		b.WriteString(indentDebugBlock("- "+debugDocument(doc, includeStructure), "    "))
+	}
+	return b.String()
+}
+
+func debugDocument(doc Document, includeStructure bool) string {
 	var b strings.Builder
 	b.WriteString("specification:\n")
 	fmt.Fprintf(&b, "  source: %q\n", doc.Source)
@@ -124,7 +153,9 @@ func debugDocument(doc Document) string {
 	fmt.Fprintf(&b, "  title: %q\n", doc.Title)
 	fmt.Fprintf(&b, "  name: %q\n", doc.Name)
 	fmt.Fprintf(&b, "  description: %q\n", doc.Description)
-	b.WriteString(indentDebugBlock(debugStructure(doc.Structure), "  "))
+	if includeStructure {
+		b.WriteString(indentDebugBlock(debugStructure(doc.Structure), "  "))
+	}
 	return b.String()
 }
 

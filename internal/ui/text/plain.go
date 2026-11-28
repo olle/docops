@@ -48,9 +48,11 @@ func Fallback(w io.Writer, snapshot view.Snapshot) error {
 	return err
 }
 
-type Debug struct{}
+type Debug struct {
+	Depth int
+}
 
-func (Debug) Render(w io.Writer, snapshot view.Snapshot) error {
-	_, err := io.WriteString(w, view.Debug(snapshot))
+func (d Debug) Render(w io.Writer, snapshot view.Snapshot) error {
+	_, err := io.WriteString(w, view.DebugAtDepth(snapshot, d.Depth))
 	return err
 }

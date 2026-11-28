@@ -116,12 +116,32 @@ func TestServeCommandUsesOnlyInformationAndPresenter(t *testing.T) {
 func TestDebugCommandDumpsSnapshot(t *testing.T) {
 	var out bytes.Buffer
 	snapshot := view.Snapshot{Documents: []view.Document{{KindLabel: "AsyncAPI", DisplayName: "Events API"}}}
-	command := debugCommand{source: fakeSnapshotSource{snapshot: snapshot}, out: &out}
+	command := debugCommand{source: fakeSnapshotSource{snapshot: snapshot}, out: &out, depth: 3}
 	if err := command.Run(); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := out.String(), view.Debug(snapshot); got != want {
 		t.Errorf("debug output = %q, want %q", got, want)
+	}
+}
+
+func TestDebugCommandHonorsDepth(t *testing.T) {
+	snapshot := view.Snapshot{Documents: []view.Document{{
+		Source:      "events.yaml",
+		KindLabel:   "AsyncAPI",
+		DisplayName: "Events API",
+		Description: "Event stream.",
+		Structure:   view.Structure{Channels: []string{"greetings"}},
+	}}}
+	for _, depth := range []int{1, 2, 3} {
+		var out bytes.Buffer
+		command := debugCommand{source: fakeSnapshotSource{snapshot: snapshot}, out: &out, depth: depth}
+		if err := command.Run(); err != nil {
+			t.Fatal(err)
+		}
+		if got, want := out.String(), view.DebugAtDepth(snapshot, depth); got != want {
+			t.Errorf("depth %d output = %q, want %q", depth, got, want)
+		}
 	}
 }
 

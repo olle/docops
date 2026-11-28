@@ -25,6 +25,7 @@ func snapshotFor(source app.SnapshotSource) view.Snapshot {
 type debugCommand struct {
 	source app.SnapshotSource
 	out    io.Writer
+	depth  int
 }
 
 func (c debugCommand) Run() error {
@@ -32,7 +33,7 @@ func (c debugCommand) Run() error {
 	if err != nil {
 		return err
 	}
-	return (text.Debug{}).Render(c.out, snapshot)
+	return (text.Debug{Depth: c.depth}).Render(c.out, snapshot)
 }
 
 type greetCommand struct {

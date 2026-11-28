@@ -53,7 +53,7 @@ func TestHelloUsesDefaultName(t *testing.T) {
 	}
 }
 
-func TestDebugFlagDumpsCatalog(t *testing.T) {
+func TestDebugFlagIsOverviewAlias(t *testing.T) {
 	cmd := exec.Command(docopsBinary, "-debug")
 	cmd.Dir = repoRoot
 	output, err := cmd.CombinedOutput()
@@ -64,18 +64,61 @@ func TestDebugFlagDumpsCatalog(t *testing.T) {
 	got := string(output)
 	for _, want := range []string{
 		"catalog:",
-		"kind: AsyncAPI",
-		"kind: Avro",
-		"kind: JSON Schema",
-		"kind: OpenAPI",
-		`title: "Hello World Events"`,
-		`title: "Greeting"`,
-		`title: "Hello World Schema"`,
-		`title: "Hello World API"`,
+		"count: 4",
+		"AsyncAPI: Hello World Events",
+		"OpenAPI: Hello World API",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("debug output = %q, want %q", got, want)
 		}
+	}
+	for _, reject := range []string{"kind: AsyncAPI", "source:", "structure:"} {
+		if strings.Contains(got, reject) {
+			t.Errorf("debug output = %q, want no %q", got, reject)
+		}
+	}
+}
+
+func TestDebugDepthFlags(t *testing.T) {
+	for _, test := range []struct {
+		flag    string
+		want    []string
+		rejects []string
+	}{
+		{
+			flag:    "-d",
+			want:    []string{"catalog:", "count: 4", "AsyncAPI: Hello World Events", "OpenAPI: Hello World API"},
+			rejects: []string{"source:", "structure:"},
+		},
+		{
+			flag:    "-dd",
+			want:    []string{"catalog:", "count: 4", `source: "`, "kind: AsyncAPI", `description: "`},
+			rejects: []string{"structure:"},
+		},
+		{
+			flag: "-ddd",
+			want: []string{"catalog:", "structure:", "channels:", "properties:", "fields:"},
+		},
+	} {
+		t.Run(test.flag, func(t *testing.T) {
+			cmd := exec.Command(docopsBinary, test.flag)
+			cmd.Dir = repoRoot
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("running docops %s: %v\n%s", test.flag, err, output)
+			}
+			got := string(output)
+			for _, want := range test.want {
+				if !strings.Contains(got, want) {
+					t.Errorf("debug output = %q, want %q", got, want)
+				}
+			}
+			for _, reject := range test.rejects {
+				if strings.Contains(got, reject) {
+					t.Errorf("debug output = %q, want no %q", got, reject)
+				}
+			}
+		})
 	}
 }
 
@@ -88,12 +131,12 @@ func TestHelpListsCanonicalFlags(t *testing.T) {
 	}
 
 	got := string(output)
-	for _, want := range []string{"-html", "-md", "-txt", "-pdf", "-web", "-tui", "-debug"} {
+	for _, want := range []string{"-html", "-md", "-txt", "-pdf", "-web", "-tui", "-d", "-dd", "-ddd", "-debug"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("help output = %q, want %q", got, want)
 		}
 	}
-	for _, removed := range []string{"  -p\n", "-serve", "-server", "  -d\n"} {
+	for _, removed := range []string{"  -p\n", "-serve", "-server"} {
 		if strings.Contains(got, removed) {
 			t.Errorf("help output = %q, want no %q", got, removed)
 		}

@@ -7,7 +7,7 @@ func TestParseConfigHTMLFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !cfg.html || cfg.markdown || cfg.txt || cfg.pdf || cfg.web || cfg.tui || cfg.debug {
+	if !cfg.html || cfg.markdown || cfg.txt || cfg.pdf || cfg.web || cfg.tui || cfg.debug > 0 {
 		t.Errorf("config = %+v, want html only", cfg)
 	}
 }
@@ -17,7 +17,7 @@ func TestParseConfigMDFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !cfg.markdown || cfg.html || cfg.txt || cfg.pdf || cfg.web || cfg.tui || cfg.debug {
+	if !cfg.markdown || cfg.html || cfg.txt || cfg.pdf || cfg.web || cfg.tui || cfg.debug > 0 {
 		t.Errorf("config = %+v, want markdown only", cfg)
 	}
 }
@@ -27,7 +27,7 @@ func TestParseConfigTXTFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !cfg.txt || cfg.html || cfg.markdown || cfg.pdf || cfg.web || cfg.tui || cfg.debug {
+	if !cfg.txt || cfg.html || cfg.markdown || cfg.pdf || cfg.web || cfg.tui || cfg.debug > 0 {
 		t.Errorf("config = %+v, want plain text only", cfg)
 	}
 }
@@ -37,45 +37,76 @@ func TestParseConfigPDFFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !cfg.pdf || cfg.html || cfg.markdown || cfg.txt || cfg.web || cfg.tui || cfg.debug {
+	if !cfg.pdf || cfg.html || cfg.markdown || cfg.txt || cfg.web || cfg.tui || cfg.debug > 0 {
 		t.Errorf("config = %+v, want pdf only", cfg)
 	}
 }
 
-func TestParseConfigTUIAndDebugFlags(t *testing.T) {
+func TestParseConfigTUIFlag(t *testing.T) {
+	cfg, err := parseConfig([]string{"-tui"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.tui || cfg.html || cfg.markdown || cfg.txt || cfg.pdf || cfg.web || cfg.debug > 0 {
+		t.Errorf("config = %+v, want tui only", cfg)
+	}
+}
+
+func TestParseConfigDebugDepthFlags(t *testing.T) {
 	for _, test := range []struct {
 		flag  string
-		check func(config) bool
+		depth int
 	}{
-		{flag: "-tui", check: func(cfg config) bool { return cfg.tui }},
-		{flag: "-debug", check: func(cfg config) bool { return cfg.debug }},
-		{flag: "--debug", check: func(cfg config) bool { return cfg.debug }},
+		{flag: "-d", depth: 1},
+		{flag: "-dd", depth: 2},
+		{flag: "-ddd", depth: 3},
+		{flag: "-debug", depth: 1},
+		{flag: "--debug", depth: 1},
 	} {
 		t.Run(test.flag, func(t *testing.T) {
 			cfg, err := parseConfig([]string{test.flag})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !test.check(cfg) {
-				t.Errorf("config = %+v, want flag %q enabled", cfg, test.flag)
+			if cfg.debug != test.depth {
+				t.Errorf("debug depth = %d, want %d", cfg.debug, test.depth)
+			}
+			if cfg.html || cfg.markdown || cfg.txt || cfg.pdf || cfg.web || cfg.tui {
+				t.Errorf("config = %+v, want debug only", cfg)
 			}
 		})
 	}
 }
 
 func TestParseConfigDebugFalse(t *testing.T) {
-	cfg, err := parseConfig([]string{"-debug=false"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.debug {
-		t.Errorf("config = %+v, want debug disabled", cfg)
+	for _, flag := range []string{"-d=false", "-dd=false", "-ddd=false", "-debug=false"} {
+		cfg, err := parseConfig([]string{flag})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.debug != 0 {
+			t.Errorf("%s: debug depth = %d, want 0", flag, cfg.debug)
+		}
 	}
 }
 
 func TestParseConfigRejectsInvalidDebugValue(t *testing.T) {
-	if _, err := parseConfig([]string{"-debug=maybe"}); err == nil {
-		t.Error("expected invalid debug value to fail")
+	for _, flag := range []string{"-d=maybe", "-debug=maybe"} {
+		if _, err := parseConfig([]string{flag}); err == nil {
+			t.Errorf("expected %s to fail", flag)
+		}
+	}
+}
+
+func TestParseConfigRejectsMultipleDebugFlags(t *testing.T) {
+	for _, args := range [][]string{
+		{"-d", "-dd"},
+		{"-dd", "-ddd"},
+		{"-ddd", "-debug"},
+	} {
+		if _, err := parseConfig(args); err == nil {
+			t.Errorf("parseConfig(%q) = no error, want debug conflict", args)
+		}
 	}
 }
 
@@ -116,6 +147,7 @@ func TestParseConfigRejectsModesTogether(t *testing.T) {
 		{"-pdf", "-tui"},
 		{"-debug", "-html"},
 		{"-web", "-tui"},
+		{"-d", "-web"},
 	} {
 		if _, err := parseConfig(args); err == nil {
 			t.Errorf("parseConfig(%q) = no error, want mode conflict", args)
@@ -132,8 +164,6 @@ func TestParseConfigRejectsRemovedFlags(t *testing.T) {
 		{"-out", "out.md"},
 		{"-addr", defaultAddr},
 		{"-markdown"},
-		{"-d"},
-		{"--d"},
 	} {
 		if _, err := parseConfig(args); err == nil {
 			t.Errorf("parseConfig(%q) = no error, want removed flag to fail", args)
@@ -141,7 +171,7 @@ func TestParseConfigRejectsRemovedFlags(t *testing.T) {
 	}
 }
 
-func TestParseConfigRejectsServeWithSpaceAddr(t *testing.T) {
+func TestParseConfigRejectsWebWithSpaceAddr(t *testing.T) {
 	if _, err := parseConfig([]string{"-web", "127.0.0.1:9090"}); err == nil {
 		t.Error("expected -web with a separate address to fail")
 	}

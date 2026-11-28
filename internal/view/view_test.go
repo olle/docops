@@ -97,6 +97,45 @@ func TestDebugCascadesFullModel(t *testing.T) {
 	}
 }
 
+func TestDebugAtDepthOverview(t *testing.T) {
+	snapshot := Snapshot{Documents: []Document{{
+		KindLabel:   "AsyncAPI",
+		DisplayName: "Events API",
+	}}}
+	want := "catalog:\n  count: 1\n  documents:\n    - AsyncAPI: Events API\n"
+	if got := DebugAtDepth(snapshot, 1); got != want {
+		t.Errorf("DebugAtDepth(1) = %q, want %q", got, want)
+	}
+}
+
+func TestDebugAtDepthMedium(t *testing.T) {
+	snapshot := Snapshot{Documents: []Document{{
+		Source:      "events.yaml",
+		KindLabel:   "AsyncAPI",
+		SpecVersion: "3.0.0",
+		Version:     "1.2.3",
+		Title:       "Events API",
+		Description: "Event stream.",
+		Structure:   Structure{Channels: []string{"greetings"}},
+	}}}
+	want := `catalog:
+  count: 1
+  documents:
+    - specification:
+      source: "events.yaml"
+      kind: AsyncAPI
+      specVersion: "3.0.0"
+      id: ""
+      version: "1.2.3"
+      title: "Events API"
+      name: ""
+      description: "Event stream."
+`
+	if got := DebugAtDepth(snapshot, 2); got != want {
+		t.Errorf("DebugAtDepth(2) = %q, want %q", got, want)
+	}
+}
+
 func TestDebugEmpty(t *testing.T) {
 	if got, want := Debug(Snapshot{}), "catalog:\n  count: 0\n"; got != want {
 		t.Errorf("Debug() = %q, want %q", got, want)
