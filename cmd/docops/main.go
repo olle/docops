@@ -3,8 +3,11 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/olle/docops/internal/app"
 )
@@ -82,35 +85,16 @@ func parseConfig(args []string) (config, error) {
 	md := fs.Bool("md", false, "render static Markdown")
 	txt := fs.Bool("txt", false, "render static plain text")
 	pdf := fs.Bool("pdf", false, "render a published PDF catalog")
-	d := fs.Bool("d", false, "overview debug output")
-	dd := fs.Bool("dd", false, "medium debug output")
-	ddd := fs.Bool("ddd", false, "full debug output")
-	debug := fs.Bool("debug", false, "alias for -d")
 
-	if err := fs.Parse(args); err != nil {
+	visibleArgs, debugDepth, err := parseDebugArgs(args)
+	if err != nil {
+		return config{}, err
+	}
+	if err := fs.Parse(visibleArgs); err != nil {
 		return config{}, err
 	}
 	if fs.NArg() > 0 {
 		return config{}, errors.New("unexpected positional arguments")
-	}
-
-	debugDepth := 0
-	for _, flag := range []struct {
-		enabled *bool
-		depth   int
-	}{
-		{enabled: d, depth: 1},
-		{enabled: dd, depth: 2},
-		{enabled: ddd, depth: 3},
-		{enabled: debug, depth: 1},
-	} {
-		if !*flag.enabled {
-			continue
-		}
-		if debugDepth > 0 {
-			return config{}, errors.New("only one debug depth flag can be used at a time")
-		}
-		debugDepth = flag.depth
 	}
 
 	modes := 0
@@ -133,4 +117,41 @@ func parseConfig(args []string) (config, error) {
 		debug:    debugDepth,
 		addr:     web.addr,
 	}, nil
+}
+
+func parseDebugArgs(args []string) ([]string, int, error) {
+	depths := map[string]int{"d": 1, "dd": 2, "ddd": 3, "debug": 1}
+	values := map[string]bool{}
+	remaining := make([]string, 0, len(args))
+
+	for _, arg := range args {
+		name, value, hasValue := strings.Cut(arg, "=")
+		name = strings.TrimPrefix(strings.TrimPrefix(name, "-"), "-")
+		if _, ok := depths[name]; !ok {
+			remaining = append(remaining, arg)
+			continue
+		}
+
+		enabled := true
+		if hasValue {
+			parsed, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, 0, fmt.Errorf("invalid boolean value %q for -%s: %v", value, name, err)
+			}
+			enabled = parsed
+		}
+		values[name] = enabled
+	}
+
+	depth := 0
+	for _, name := range []string{"d", "dd", "ddd", "debug"} {
+		if !values[name] {
+			continue
+		}
+		if depth > 0 {
+			return nil, 0, errors.New("only one debug depth flag can be used at a time")
+		}
+		depth = depths[name]
+	}
+	return remaining, depth, nil
 }

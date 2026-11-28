@@ -90,6 +90,25 @@ func TestParseConfigDebugFalse(t *testing.T) {
 	}
 }
 
+func TestParseConfigDebugLastValueWins(t *testing.T) {
+	for _, test := range []struct {
+		args  []string
+		depth int
+	}{
+		{args: []string{"-d", "-d=false"}, depth: 0},
+		{args: []string{"-d=false", "-d"}, depth: 1},
+		{args: []string{"-d=false", "-dd"}, depth: 2},
+	} {
+		cfg, err := parseConfig(test.args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.debug != test.depth {
+			t.Errorf("parseConfig(%q).debug = %d, want %d", test.args, cfg.debug, test.depth)
+		}
+	}
+}
+
 func TestParseConfigRejectsInvalidDebugValue(t *testing.T) {
 	for _, flag := range []string{"-d=maybe", "-debug=maybe"} {
 		if _, err := parseConfig([]string{flag}); err == nil {

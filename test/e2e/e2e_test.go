@@ -131,12 +131,12 @@ func TestHelpListsCanonicalFlags(t *testing.T) {
 	}
 
 	got := string(output)
-	for _, want := range []string{"-html", "-md", "-txt", "-pdf", "-web", "-tui", "-d", "-dd", "-ddd", "-debug"} {
+	for _, want := range []string{"-html", "-md", "-txt", "-pdf", "-web", "-tui"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("help output = %q, want %q", got, want)
 		}
 	}
-	for _, removed := range []string{"  -p\n", "-serve", "-server"} {
+	for _, removed := range []string{"  -p\n", "-serve", "-server", "-d", "-dd", "-ddd", "-debug"} {
 		if strings.Contains(got, removed) {
 			t.Errorf("help output = %q, want no %q", got, removed)
 		}
